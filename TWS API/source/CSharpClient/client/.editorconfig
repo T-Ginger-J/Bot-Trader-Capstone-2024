@@ -1,0 +1,16 @@
+[*.cs]
+
+# IDE1006: Naming Styles
+dotnet_diagnostic.ide1006.severity = silent
+
+#Indent Styles
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+[*]
+end_of_line = lf
+
+# ReSharper properties
+resharper_csharp_indent_style = space
+resharper_csharp_use_indent_from_vs = false

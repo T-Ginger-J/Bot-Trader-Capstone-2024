@@ -1,0 +1,10 @@
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\bin\Release\OrderConditionsParsingTestProject.dll
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\bin\Release\OrderConditionsParsingTestProject.pdb
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\bin\Release\Microsoft.VisualStudio.QualityTools.UnitTestFramework.dll
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\bin\Release\TWSLib.dll
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\bin\Release\TWSLib.pdb
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\obj\Release\TWSLibTestProject.csproj.AssemblyReference.cache
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\obj\Release\TWSLibTestProject.csproj.CoreCompileInputs.cache
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\obj\Release\TWSLibTe.1CF03F17.Up2Date
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\obj\Release\OrderConditionsParsingTestProject.dll
+C:\Users\lszelag.EXT\git-repos\tws-api-installer\apiInstaller\githubTwsApiCode\tws-api\tests\TWSLibTestProject\obj\Release\OrderConditionsParsingTestProject.pdb
