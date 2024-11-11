@@ -37,9 +37,19 @@
 #include <ctime>
 #include <fstream>
 #include <cstdint>
+#include <cmath>
+#include <algorithm>
 
 const int PING_DEADLINE = 2; // seconds
 const int SLEEP_BETWEEN_PINGS = 30; // seconds
+
+///////////////////////////////
+//OUR GLOBAL VARIABLES
+bool isFulfilled = false;
+bool getIndexValue = true;
+int underlyingConId;
+double spxCurrentPrice;
+
 
 ///////////////////////////////////////////////////////////
 // member funcs
@@ -110,9 +120,9 @@ void CapstoneCppClient::setOptionalCapabilities(const std::string& optionalCapab
 void CapstoneCppClient::processMessages()
 {
 	time_t now = time(NULL);
-	printf("\nHit at start of process messages check order where nextvalidID is called\n");
+	//printf("\nHit at start of process messages check order where nextvalidID is called\n");
 	printf("\nm_state value: %o\n",m_state);
-	printf("\nm_orderId value: %o\n", m_orderId);
+	printf("m_orderId value: %o\n\n", m_orderId);
 
 	/*****************************************************************/
     /* Below are few quick-to-test examples on the IB API functions grouped by functionality. Uncomment the relevant methods. */
@@ -163,11 +173,15 @@ void CapstoneCppClient::processMessages()
 			break;
 		case ST_HISTORICALDATAREQUESTS_ACK:
 			break;
-		case ST_OPTIONSOPERATIONS:
+
+		case ST_OPTIONSOPERATIONS://////////////////
 			optionsOperations();
 			break;
 		case ST_OPTIONSOPERATIONS_ACK:
 			break;
+		/// <summary>
+		/// ////////////////////
+
 		case ST_CONTRACTOPERATION:
 			contractOperations();
 			break;
@@ -193,7 +207,7 @@ void CapstoneCppClient::processMessages()
 			accountOperations();
 			break;
 		case ST_ACCOUNTOPERATIONS_ACK:
-			printf("\nm_state value: %o\n", m_state); // AFTER THE ACOCUNT OP IS DONE WE SIT HERE IN LOOP
+			printf("\nack m_state value: %o\n", m_state); // AFTER THE ACOCUNT OP IS DONE WE SIT HERE IN LOOP
 			break;
 		case ST_ORDEROPERATIONS:
 			orderOperations();
@@ -325,13 +339,62 @@ void CapstoneCppClient::processMessages()
 				return;
 			}
 			break;
+			/////////////////////////////////////////////////////
+		case ST_USERINPUT:
+			getUserInput();
+			break;
+		case ST_GETSPXWDETAILS:
+			break;
 	}
 
 	m_osSignal.waitForSignal();
 	errno = 0;
 	m_pReader->processMsgs();
 }
+////////////////////////////////////////////////////////////////////////
+//OUR METHODS HERE
+////////////////////////////////////////////////////////////////////////
+time_t parseDate(const std::string& dateStr) {
+	struct tm tm = {};
 
+	std::istringstream ss(dateStr);
+	ss >> std::get_time(&tm, "%Y%m%d");
+
+	if (ss.fail()) {
+		std::cerr << "Failed to parse date: " << dateStr << std::endl;
+		return -1; 
+	}
+
+	return mktime(&tm);
+}
+
+void CapstoneCppClient::getUserInput() {
+	printf("IN User Input Method Sleeping for 5 seconds\n");
+	std::this_thread::sleep_for(std::chrono::seconds(5));
+}
+
+void CapstoneCppClient::optionsOperations()
+{
+
+	Contract spxwContract;
+	spxwContract.symbol = "SPX";
+	spxwContract.secType = "IND";
+	spxwContract.exchange = "CBOE";
+	spxwContract.currency = "USD";
+
+	m_pClient->reqContractDetails(1, spxwContract);
+
+	printf("We are hitting here and reqContract is being called\n");
+	std::this_thread::sleep_for(std::chrono::seconds(2));
+
+	m_state = ST_OPTIONSOPERATIONS_ACK;
+}
+
+void CapstoneCppClient::getCurrentSPXValue() {
+
+}
+///////////////////////////////////////////////////////////////////////
+//TWS SAMPLE METHOD BELOW
 //////////////////////////////////////////////////////////////////
 // methods
 //! [connectack]
@@ -601,34 +664,6 @@ void CapstoneCppClient::historicalDataRequests()
 	m_pClient->cancelHistoricalData(4003);
 
 	m_state = ST_HISTORICALDATAREQUESTS_ACK;
-}
-
-void CapstoneCppClient::optionsOperations()
-{
-	//! [reqsecdefoptparams]
-	m_pClient->reqSecDefOptParams(0, "IBM", "", "STK", 8314);
-	//! [reqsecdefoptparams]
-
-	//! [calculateimpliedvolatility]
-	m_pClient->calculateImpliedVolatility(5001, ContractSamples::OptionWithLocalSymbol(), 0.5, 55, TagValueListSPtr());
-	//! [calculateimpliedvolatility]
-
-	//** Canceling implied volatility ***
-	m_pClient->cancelCalculateImpliedVolatility(5001);
-
-	//! [calculateoptionprice]
-	m_pClient->calculateOptionPrice(5002, ContractSamples::OptionWithLocalSymbol(), 0.6, 55, TagValueListSPtr());
-	//! [calculateoptionprice]
-
-	//** Canceling option's price calculation ***
-	m_pClient->cancelCalculateOptionPrice(5002);
-
-	//! [exercise_options]
-	//** Exercising options ***
-	m_pClient->exerciseOptions(5003, ContractSamples::OptionWithTradingClass(), 1, 1, "", 1, "20231018-12:00:00", "CustAcct", true);
-	//! [exercise_options]
-
-	m_state = ST_OPTIONSOPERATIONS_ACK;
 }
 
 void CapstoneCppClient::contractOperations()
@@ -1322,7 +1357,6 @@ void CapstoneCppClient::nextValidId( OrderId orderId)
 
     //m_state = ST_TICKOPTIONCOMPUTATIONOPERATION; 
     //m_state = ST_TICKDATAOPERATION; 
-    //m_state = ST_OPTIONSOPERATIONS;
     //m_state = ST_REQTICKBYTICKDATA; 
     //m_state = ST_REQHISTORICALTICKS; 
     //m_state = ST_CONTFUT; 
@@ -1337,7 +1371,7 @@ void CapstoneCppClient::nextValidId( OrderId orderId)
 	//m_state = ST_MARKETSCANNERS;
 	//m_state = ST_FUNDAMENTALS;
 	//m_state = ST_BULLETINS;
-	m_state = ST_ACCOUNTOPERATIONS;
+	//m_state = ST_ACCOUNTOPERATIONS;
 	//m_state = ST_ORDEROPERATIONS;
 	//m_state = ST_OCASAMPLES;
 	//m_state = ST_CONDITIONSAMPLES;
@@ -1363,6 +1397,9 @@ void CapstoneCppClient::nextValidId( OrderId orderId)
 	//m_state = ST_PING;
 	//m_state = ST_WHATIFSAMPLES;
 	//m_state = ST_WSH;
+
+	//m_state = ST_USERINPUT;
+	m_state = ST_OPTIONSOPERATIONS;
 }
 
 
@@ -1403,12 +1440,6 @@ void CapstoneCppClient::error(int id, int errorCode, const std::string& errorStr
     }
 }
 //! [error]
-
-//! [tickprice]
-void CapstoneCppClient::tickPrice( TickerId tickerId, TickType field, double price, const TickAttrib& attribs) {
-    printf( "Tick Price. Ticker Id: %ld, Field: %d, Price: %s, CanAutoExecute: %d, PastLimit: %d, PreOpen: %d\n", tickerId, (int)field, Utils::doubleMaxString(price).c_str(), attribs.canAutoExecute, attribs.pastLimit, attribs.preOpen);
-}
-//! [tickprice]
 
 //! [ticksize]
 void CapstoneCppClient::tickSize( TickerId tickerId, TickType field, Decimal size) {
@@ -1512,14 +1543,6 @@ void CapstoneCppClient::accountDownloadEnd(const std::string& accountName) {
 }
 //! [accountdownloadend]
 
-//! [contractdetails]
-void CapstoneCppClient::contractDetails( int reqId, const ContractDetails& contractDetails) {
-	printf( "ContractDetails begin. ReqId: %d\n", reqId);
-	printContractMsg(contractDetails.contract);
-	printContractDetailsMsg(contractDetails);
-	printf( "ContractDetails end. ReqId: %d\n", reqId);
-}
-//! [contractdetails]
 
 //! [bondcontractdetails]
 void CapstoneCppClient::bondContractDetails( int reqId, const ContractDetails& contractDetails) {
@@ -1662,11 +1685,7 @@ void CapstoneCppClient::printBondContractDetailsMsg(const ContractDetails& contr
 	printContractDetailsSecIdList(contractDetails.secIdList);
 }
 
-//! [contractdetailsend]
-void CapstoneCppClient::contractDetailsEnd( int reqId) {
-	printf( "ContractDetailsEnd. %d\n", reqId);
-}
-//! [contractdetailsend]
+
 
 //! [execdetails]
 void CapstoneCppClient::execDetails( int reqId, const Contract& contract, const Execution& execution) {
@@ -1862,19 +1881,6 @@ void CapstoneCppClient::accountUpdateMultiEnd( int reqId) {
 	printf("Account Update Multi End. Request: %d\n", reqId);
 }
 //! [accountupdatemultiend]
-
-//! [securityDefinitionOptionParameter]
-void CapstoneCppClient::securityDefinitionOptionalParameter(int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass,
-                                                        const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes) {
-	printf("Security Definition Optional Parameter. Request: %d, Trading Class: %s, Multiplier: %s\n", reqId, tradingClass.c_str(), multiplier.c_str());
-}
-//! [securityDefinitionOptionParameter]
-
-//! [securityDefinitionOptionParameterEnd]
-void CapstoneCppClient::securityDefinitionOptionalParameterEnd(int reqId) {
-	printf("Security Definition Optional Parameter End. Request: %d\n", reqId);
-}
-//! [securityDefinitionOptionParameterEnd]
 
 //! [softDollarTiers]
 void CapstoneCppClient::softDollarTiers(int reqId, const std::vector<SoftDollarTier> &tiers) {
@@ -2214,3 +2220,147 @@ void CapstoneCppClient::userInfo(int reqId, const std::string& whiteBrandingId) 
     printf("User Info. ReqId: %d, WhiteBrandingId: %s\n", reqId, whiteBrandingId.c_str());
 }
 //! [userInfo]
+////////////////////////////////////////////////
+
+
+//! [contractdetails]
+void CapstoneCppClient::contractDetails(int reqId, const ContractDetails& contractDetails) {
+
+	printf("ContractDetails begin. ReqId: %d\n", reqId);
+	printContractMsg(contractDetails.contract);
+	printContractDetailsMsg(contractDetails);
+	printf("ContractDetails end. ReqId: %d\n", reqId);
+
+	underlyingConId = contractDetails.contract.conId;
+
+	
+}
+//! [contractdetails]
+
+
+//! [contractdetailsend]
+void CapstoneCppClient::contractDetailsEnd(int reqId) {
+	printf("ContractDetailsEnd. %d\n", reqId);
+	std::cout << "Retrieved SPX underlying conId: " << underlyingConId << std::endl;
+
+	if (underlyingConId > 0) {
+		m_pClient->reqSecDefOptParams(2, "SPX", "", "IND", underlyingConId);
+	}
+	else {
+		std::cerr << "Invalid conId for SPX. Please check the contract details." << std::endl;
+	}
+
+}
+//! [contractdetailsend]
+
+//! [securityDefinitionOptionParameter]
+void CapstoneCppClient::securityDefinitionOptionalParameter(int reqId, const std::string& exchange, int underlyingConId, const std::string& tradingClass,
+	const std::string& multiplier, const std::set<std::string>& expirations, const std::set<double>& strikes) {
+
+	std::string target("SPXW");
+
+	if ((tradingClass.compare(target)) != 0) {
+		return;
+	}
+	printf("Security Definition Optional Parameter. Request: %d, Trading Class: %s, Multiplier: %s\n", reqId, tradingClass.c_str(), multiplier.c_str());
+
+	getIndexValue = true;
+
+	/*Contract contract;
+	contract.symbol = "SPX";
+	contract.secType = "IND";  
+	contract.exchange = "CBOE";
+	contract.currency = "USD";
+	contract.conId = underlyingConId;
+
+	m_pClient->reqMarketDataType(4);
+	std::this_thread::sleep_for(std::chrono::seconds(2));
+	m_pClient->reqMktData(3, contract, "", false, false, TagValueListSPtr());
+	std::this_thread::sleep_for(std::chrono::seconds(5));
+	m_pClient->cancelMktData(3); */
+		
+	// Step 1: Fetch current price of SPX (or SPXW)
+	double currentPrice = 6000.00;  // NEED TO GET REAL TIME PRICE HERE
+	/////////////////////////////////////////
+	//double currentPrice = spxCurrentPrice;
+
+
+	std::cout << "Current Index Price: " << currentPrice << std::endl;
+
+	// Step 2: Filter and sort strikes based on proximity to the current price
+	std::vector<double> sortedStrikes(strikes.begin(), strikes.end());
+
+	// Sort strikes by their distance to the current price
+	std::sort(sortedStrikes.begin(), sortedStrikes.end(), [currentPrice](double a, double b) {
+		return std::abs(a - currentPrice) < std::abs(b - currentPrice);
+		});
+
+	// Limit to the closest 20 strikes
+	std::cout << "Closest 20 Strikes to Current Price in Ascending Order: " << std::endl;
+	int strikeCount = sortedStrikes.size();
+	if (strikeCount > 20) {
+		strikeCount = 20;
+	}
+
+	// Now, sort the closest strikes numerically (ascending order)
+	std::sort(sortedStrikes.begin(), sortedStrikes.begin() + strikeCount);
+
+	// Display the strikes in ascending order (from least to greatest)
+	for (int i = 0; i < strikeCount; ++i) {
+		std::cout << "Strike: " << sortedStrikes[i] << std::endl;
+	}
+
+	// Filter and sort expirations to get the next 3 closest to today
+	std::vector<std::string> sortedExpirations(expirations.begin(), expirations.end());
+
+	// Get the current date
+	time_t currentTime = time(0);
+
+	// Sort expirations by the difference with current date
+	std::sort(sortedExpirations.begin(), sortedExpirations.end(), [currentTime](const std::string& a, const std::string& b) {
+		return std::abs(difftime(parseDate(a), currentTime)) < std::abs(difftime(parseDate(b), currentTime));
+		});
+
+	// Limit to the next 3 closest expirations
+	std::cout << "Next 3 Closest Expirations:" << std::endl;
+	int expirationCount = sortedExpirations.size();
+	if (expirationCount > 3) {
+		expirationCount = 3;
+	}
+	for (int i = 0; i < expirationCount; ++i) {
+		std::cout << "Expiration: " << sortedExpirations[i] << std::endl;
+	}
+}
+//! [securityDefinitionOptionParameter]
+
+//! [securityDefinitionOptionParameterEnd]
+void CapstoneCppClient::securityDefinitionOptionalParameterEnd(int reqId) {
+	printf("Security Definition Optional Parameter End. Request: %d\n", reqId);
+	m_state = ST_USERINPUT;
+}
+//! [securityDefinitionOptionParameterEnd]
+
+//! [tickprice]
+void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double price, const TickAttrib& attribs) {
+	printf("Tick Price. Ticker Id: %ld, Field: %d, Price: %s, CanAutoExecute: %d, PastLimit: %d, PreOpen: %d\n", tickerId, (int)field, Utils::doubleMaxString(price).c_str(), attribs.canAutoExecute, attribs.pastLimit, attribs.preOpen);
+	if (getIndexValue) {
+		spxCurrentPrice = price;
+		getIndexValue = false;
+
+	}
+	else {
+		if (field == BID) {
+			std::cout << "Bid: " << price << std::endl;
+		}
+		else if (field == ASK) {
+			std::cout << "Ask: " << price << std::endl;
+		}
+		else if (field == LAST) {
+			std::cout << "Market Price (Last): " << price << std::endl;
+		}
+	}
+	
+}
+//! [tickprice]
+
+

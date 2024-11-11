@@ -39,7 +39,9 @@ Decimal DecimalFunctions::stringToDecimal(std::string str) {
     if (str.compare(std::string{ "2147483647" }) == 0 || str.compare(std::string{ "9223372036854775807" }) == 0 || str.compare(std::string{ "1.7976931348623157E308" }) == 0) {
         str.clear();
     }
-    return __bid64_from_string(const_cast<char*>(str.c_str()), 0, &flags);
+
+
+   return __bid64_from_string(const_cast<char*>(str.c_str()), 0, &flags);
 }
 
 std::string DecimalFunctions::decimalToString(Decimal value) {

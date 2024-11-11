@@ -22,6 +22,37 @@
 	/*
      * Usually, the easiest way to define a Stock/CASH contract is through these four attributes.
      */
+///////////////////////////////////
+//OUR CONTRACT TYPES BELOW
+Contract ContractSamples::SPXLongCalenderContract() {
+
+	Contract contract;
+	contract.symbol = "SPX";
+	contract.secType = "OPT";
+	contract.currency = "USD";
+	contract.exchange = "CBOE";
+
+	ComboLegSPtr leg1(new ComboLeg); //Buy Long leg
+	leg1->conId = 735316800;
+	leg1->action = "BUY";
+	leg1->ratio = 1;
+	leg1->exchange = "CBOE";
+
+	ComboLegSPtr leg2(new ComboLeg); // Sell Short Leg
+	leg2->conId = 735316575;
+	leg2->action = "SELL";
+	leg2->ratio = 1;
+	leg2->exchange = "CBOE";
+
+	contract.comboLegs.reset(new Contract::ComboLegList());
+	contract.comboLegs->push_back(leg1);
+	contract.comboLegs->push_back(leg2);
+
+	return contract;
+}
+
+//////////////////////////////////
+//TWS CONTRACT EXAMPLES BELOW
 Contract ContractSamples::IBMBond(){
 	//! [IBM bond contract]
 	Contract contract;

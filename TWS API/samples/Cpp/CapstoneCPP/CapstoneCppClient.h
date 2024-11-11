@@ -42,8 +42,6 @@ enum State {
 	ST_BULLETINS_ACK,
 	ST_ACCOUNTOPERATIONS,
 	ST_ACCOUNTOPERATIONS_ACK,
-	ST_ORDEROPERATIONS,
-	ST_ORDEROPERATIONS_ACK,
 	ST_OCASAMPLES,
 	ST_OCASAMPLES_ACK,
 	ST_CONDITIONSAMPLES,
@@ -98,7 +96,16 @@ enum State {
 	ST_IBKRATSSAMPLE,
 	ST_IBKRATSSAMPLE_ACK,
 	ST_WSH,
-	ST_WSH_ACK
+	ST_WSH_ACK,
+
+	ST_ORDEROPERATIONS,
+	ST_ORDEROPERATIONS_ACK,
+	/////////////////////////////////
+	//OUR STATES BELOW
+	ST_USERINPUT,
+	ST_USERINPUT_ACK,
+	ST_GETSPXPRICE,
+	ST_GETSPXPRICE_ACK
 };
 
 //! [ewrapperimpl]
@@ -162,7 +169,11 @@ private:
 	void wshCalendarOperations();
 
 	void reqCurrentTime();
-
+	/////////////////////////////////////////
+	//OUR METHODS STUBS BELOW
+	void getUserInput();
+	void getCurrentSPXValue();
+	//////////////////////////////////////////////////
 public:
 	// events
 	#include "EWrapper_prototypes.h"
@@ -187,6 +198,7 @@ private:
 	std::unique_ptr<EReader> m_pReader;
     bool m_extraAuth;
 	std::string m_bboExchange;
+	
 };
 
 #endif

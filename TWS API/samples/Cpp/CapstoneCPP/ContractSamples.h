@@ -8,6 +8,8 @@ struct Contract;
 
 class ContractSamples {
 public:
+	static Contract SPXLongCalenderContract();
+
 	static Contract IBMBond();
 	static Contract IBKRStk();
 	static Contract HKStk();
