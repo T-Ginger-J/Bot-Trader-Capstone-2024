@@ -24,22 +24,23 @@
      */
 ///////////////////////////////////
 //OUR CONTRACT TYPES BELOW
-Contract ContractSamples::SPXLongCalenderContract() {
+Contract ContractSamples::SPXLongCalenderContract(int conIdLeg1, int conIdLeg2) {
 
 	Contract contract;
 	contract.symbol = "SPX";
-	contract.secType = "OPT";
+	contract.secType = "BAG";
 	contract.currency = "USD";
 	contract.exchange = "CBOE";
+	contract.tradingClass = "SPXW";
 
 	ComboLegSPtr leg1(new ComboLeg); //Buy Long leg
-	leg1->conId = 735316800;
+	leg1->conId = conIdLeg1; //NEED TO PROGRAMTICALLY GET THIS
 	leg1->action = "BUY";
 	leg1->ratio = 1;
 	leg1->exchange = "CBOE";
 
 	ComboLegSPtr leg2(new ComboLeg); // Sell Short Leg
-	leg2->conId = 735316575;
+	leg2->conId = conIdLeg2; //NEED TO PROGRAMTICALLY GET THIS
 	leg2->action = "SELL";
 	leg2->ratio = 1;
 	leg2->exchange = "CBOE";
@@ -48,6 +49,21 @@ Contract ContractSamples::SPXLongCalenderContract() {
 	contract.comboLegs->push_back(leg1);
 	contract.comboLegs->push_back(leg2);
 
+	return contract;
+}
+
+Contract ContractSamples::SingleSPXContract(double strike, std::string dte, std::string action) {
+	Contract contract;
+	contract.symbol = "SPX";                       // S&P 500 Index
+	contract.secType = "OPT";                      // Security type: Option
+	contract.exchange = "CBOE";                    // Exchange
+	contract.currency = "USD";                     // Currency
+	contract.lastTradeDateOrContractMonth = dte; // Expiration date in YYYYMMDD format
+	contract.strike = strike;                      // Example strike price
+	contract.right = action;                          // 'C' for Call, 'P' for Put
+	contract.multiplier = "100";                   // Multiplier
+	contract.tradingClass = "SPXW";
+	
 	return contract;
 }
 

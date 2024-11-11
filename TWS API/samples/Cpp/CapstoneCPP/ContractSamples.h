@@ -8,7 +8,8 @@ struct Contract;
 
 class ContractSamples {
 public:
-	static Contract SPXLongCalenderContract();
+	static Contract SPXLongCalenderContract(int conIdLeg1, int conIdLeg2);
+	static Contract SingleSPXContract(double strike, std::string dte, std::string action);
 
 	static Contract IBMBond();
 	static Contract IBKRStk();

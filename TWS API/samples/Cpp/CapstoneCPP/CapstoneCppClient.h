@@ -105,7 +105,13 @@ enum State {
 	ST_USERINPUT,
 	ST_USERINPUT_ACK,
 	ST_GETSPXPRICE,
-	ST_GETSPXPRICE_ACK
+	ST_GETSPXPRICE_ACK,
+	ST_SINGLEORDER,
+	ST_SINGLEORDER_ACK,
+	ST_COMBOORDER,
+	ST_COMBOORDER_ACK,
+	ST_COMBOPRICE,
+	ST_COMBOPRICE_ACK
 };
 
 //! [ewrapperimpl]
@@ -169,10 +175,16 @@ private:
 	void wshCalendarOperations();
 
 	void reqCurrentTime();
+	
 	/////////////////////////////////////////
 	//OUR METHODS STUBS BELOW
 	void getUserInput();
 	void getCurrentSPXValue();
+	void getSingleOrder();
+	void getComboOrder();
+	void getComboPrices();
+	void placeSingleOrder();
+	void placeComboOrder();
 	//////////////////////////////////////////////////
 public:
 	// events
