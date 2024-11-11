@@ -127,3 +127,16 @@ std::string Utils::getFundAssetTypeName(FundAssetType fundAssetType) {
     }
     return "None";
 }
+
+bool Utils::isValidInteger(const std::string& str) {
+    std::stringstream ss(str);
+    int num;
+    ss >> num;
+    return ss.eof() && !ss.fail();
+}
+bool Utils::isValidDouble(const std::string& str) {
+    std::stringstream ss(str);
+    double num;
+    ss >> num;
+    return ss.eof() && !ss.fail();
+}

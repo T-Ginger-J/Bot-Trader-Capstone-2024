@@ -23,6 +23,9 @@ public:
 
     static std::string getFundDistributionPolicyIndicatorName(FundDistributionPolicyIndicator fundDistributionPolicyIndicator);
     static std::string getFundAssetTypeName(FundAssetType fundAssetType);
+
+    static bool isValidInteger(const std::string& str);
+    static bool isValidDouble(const std::string& str);
 };
 
 #endif
