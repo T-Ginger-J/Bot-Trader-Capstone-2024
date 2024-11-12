@@ -52,6 +52,34 @@ Contract ContractSamples::SPXLongCalenderContract(int conIdLeg1, int conIdLeg2) 
 	return contract;
 }
 
+Contract ContractSamples::SPXComboContract(int conIdLeg1,std::string actionLeg1, int conIdLeg2, std::string actionLeg2) {
+
+	Contract contract;
+	contract.symbol = "SPX";
+	contract.secType = "BAG";
+	contract.currency = "USD";
+	contract.exchange = "CBOE";
+	contract.tradingClass = "SPXW";
+
+	ComboLegSPtr leg1(new ComboLeg); //Buy Long leg
+	leg1->conId = conIdLeg1; //NEED TO PROGRAMTICALLY GET THIS
+	leg1->action = actionLeg1;
+	leg1->ratio = 1;
+	leg1->exchange = "CBOE";
+
+	ComboLegSPtr leg2(new ComboLeg); // Sell Short Leg
+	leg2->conId = conIdLeg2; //NEED TO PROGRAMTICALLY GET THIS
+	leg2->action = actionLeg2;
+	leg2->ratio = 1;
+	leg2->exchange = "CBOE";
+
+	contract.comboLegs.reset(new Contract::ComboLegList());
+	contract.comboLegs->push_back(leg1);
+	contract.comboLegs->push_back(leg2);
+
+	return contract;
+}
+
 Contract ContractSamples::SingleSPXContract(double strike, std::string dte, std::string action) {
 	Contract contract;
 	contract.symbol = "SPX";                       // S&P 500 Index

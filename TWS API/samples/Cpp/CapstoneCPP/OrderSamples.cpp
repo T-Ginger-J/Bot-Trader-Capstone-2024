@@ -18,6 +18,47 @@
     /// Before contacting our API support team please refer to the available documentation.
     /// </summary>
 
+
+	/// <summary>
+	/// Bracket orders are designed to help limit your loss and lock in a profit by "bracketing" an order with two opposite-side orders. 
+	/// A BUY order is bracketed by a high-side sell limit order and a low-side sell stop order. A SELL order is bracketed by a high-side buy 
+	/// stop order and a low side buy limit order.
+	/// Products: CFD, BAG, FOP, CASH, FUT, OPT, STK, WAR
+	/// </summary>	
+	//! [bracket]
+void OrderSamples::BracketOrder(int parentOrderId, Order& parent, Order& takeProfit, Order& stopLoss, std::string action, Decimal quantity, double limitPrice, double takeProfitLimitPrice, double stopLossPrice) {
+	//This will be our main or "parent" order
+	parent.orderId = parentOrderId;
+	parent.action = action;
+	parent.orderType = "LMT";
+	parent.totalQuantity = quantity;
+	parent.lmtPrice = limitPrice;
+	//The parent and children orders will need this attribute set to false to prevent accidental executions.
+	//The LAST CHILD will have it set to true, 
+	parent.transmit = false;
+
+	takeProfit.orderId = parent.orderId + 1;
+	takeProfit.action = (action == "BUY") ? "SELL" : "BUY";
+	takeProfit.orderType = "LMT";
+	takeProfit.totalQuantity = quantity;
+	takeProfit.lmtPrice = takeProfitLimitPrice;
+	takeProfit.parentId = parentOrderId;
+	takeProfit.transmit = false;
+
+	stopLoss.orderId = parent.orderId + 2;
+	stopLoss.action = (action == "BUY") ? "SELL" : "BUY";
+	stopLoss.orderType = "STP";
+	//Stop trigger price
+	stopLoss.auxPrice = stopLossPrice;
+	stopLoss.totalQuantity = quantity;
+	stopLoss.parentId = parentOrderId;
+	//In this case, the low side order will be the last child being sent. Therefore, it needs to set this attribute to true 
+	//to activate all its predecessors
+	stopLoss.transmit = true;
+}
+//! [bracket]
+
+
 	/// <summary>
     /// An auction order is entered into the electronic trading system during the pre-market opening period for execution at the 
     /// Calculated Opening Price (COP). If your order is not filled on the open, the order is re-submitted as a limit order with 
@@ -470,45 +511,6 @@ Order OrderSamples::PeggedToMidpoint(std::string action, Decimal quantity, doubl
 	// ! [pegged_midpoint]
 	return order;
 }
-
-	/// <summary>
-    /// Bracket orders are designed to help limit your loss and lock in a profit by "bracketing" an order with two opposite-side orders. 
-    /// A BUY order is bracketed by a high-side sell limit order and a low-side sell stop order. A SELL order is bracketed by a high-side buy 
-    /// stop order and a low side buy limit order.
-    /// Products: CFD, BAG, FOP, CASH, FUT, OPT, STK, WAR
-    /// </summary>	
-	//! [bracket]
-void OrderSamples::BracketOrder(int parentOrderId, Order& parent, Order& takeProfit, Order& stopLoss, std::string action, Decimal quantity, double limitPrice, double takeProfitLimitPrice, double stopLossPrice){
-	//This will be our main or "parent" order
-	parent.orderId = parentOrderId;
-	parent.action = action;
-	parent.orderType = "LMT";
-	parent.totalQuantity = quantity;
-	parent.lmtPrice = limitPrice;
-	//The parent and children orders will need this attribute set to false to prevent accidental executions.
-    //The LAST CHILD will have it set to true, 
-	parent.transmit = false;
-
-	takeProfit.orderId = parent.orderId + 1;
-	takeProfit.action = (action == "BUY") ? "SELL" : "BUY";
-	takeProfit.orderType = "LMT";
-	takeProfit.totalQuantity = quantity;
-	takeProfit.lmtPrice = takeProfitLimitPrice;
-	takeProfit.parentId = parentOrderId;
-	takeProfit.transmit = false;
-
-	stopLoss.orderId = parent.orderId + 2;
-	stopLoss.action = (action == "BUY") ? "SELL" : "BUY";
-	stopLoss.orderType = "STP";
-	//Stop trigger price
-	stopLoss.auxPrice = stopLossPrice;
-	stopLoss.totalQuantity = quantity;
-	stopLoss.parentId = parentOrderId;
-	//In this case, the low side order will be the last child being sent. Therefore, it needs to set this attribute to true 
-    //to activate all its predecessors
-	stopLoss.transmit = true;
-}
-	//! [bracket]
 
 	/// <summary>
     /// Products:CFD, FUT, FOP, OPT, STK, WAR

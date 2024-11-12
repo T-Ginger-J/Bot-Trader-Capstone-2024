@@ -9,6 +9,7 @@ struct Contract;
 class ContractSamples {
 public:
 	static Contract SPXLongCalenderContract(int conIdLeg1, int conIdLeg2);
+	static Contract SPXComboContract(int conIdLeg1, std::string actionLeg1, int conIdLeg2, std::string actionLeg2);
 	static Contract SingleSPXContract(double strike, std::string dte, std::string action);
 
 	static Contract IBMBond();
