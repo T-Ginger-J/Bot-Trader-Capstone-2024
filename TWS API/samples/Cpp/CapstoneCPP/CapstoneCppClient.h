@@ -83,6 +83,8 @@ public:
 	void setOptionalCapabilities(const std::string&);
 	void processMessages();
 
+
+
 public:
 
 	bool connect(const char * host, int port, int clientId = 0);
@@ -127,12 +129,13 @@ private:
 	/////////////////////////////////////////
 	//OUR METHODS STUBS BELOW
 	void getUserInput();
-	void getCurrentSPXValue();
 	void getSingleOrder();
 	void getComboOrder();
 	void getComboPrices();
 	void placeSingleOrder();
 	void placeComboOrder();
+
+	void getAllExecutions();
 	//////////////////////////////////////////////////
 public:
 	// events
