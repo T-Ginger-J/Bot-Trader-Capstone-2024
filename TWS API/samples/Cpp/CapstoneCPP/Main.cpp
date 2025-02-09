@@ -4,6 +4,8 @@
 #define UNICODE
 #include <windows.h>
 
+#include "SharedData.h"
+
 #include "StdAfx.h"
 
 #include <stdio.h>
@@ -160,6 +162,35 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
     case WM_COMMAND:
         if (LOWORD(wParam) == ID_START_BUTTON) {
             wchar_t buffer[10];
+            /*
+             GetWindowTextW(hFrontDTE, buffer, 10);
+            sharedData.frontDTE = _wtoi(buffer);
+
+            GetWindowTextW(hBackDTE, buffer, 10);
+            sharedData.backDTE = _wtoi(buffer);
+
+            GetWindowTextW(hEntryHour, buffer, 10);
+            sharedData.entryHour = _wtoi(buffer);
+
+            GetWindowTextW(hEntryMin, buffer, 10);
+            sharedData.entryMin = _wtoi(buffer);
+
+            GetWindowTextW(hExitHour, buffer, 10);
+            sharedData.exitHour = _wtoi(buffer);
+
+            GetWindowTextW(hExitMin, buffer, 10);
+            sharedData.exitMin = _wtoi(buffer);
+
+            GetWindowTextW(hTP, buffer, 10);
+            sharedData.takeProfit = _wtof(buffer);
+
+            GetWindowTextW(hSL, buffer, 10);
+            sharedData.stopLoss = _wtof(buffer);
+
+            GetWindowTextW(hEntryPrice, buffer, 10);
+            sharedData.entryPrice = _wtof(buffer);
+            */
+
 
             // Read values
             GetWindowTextW(hFrontDTE, buffer, 10);

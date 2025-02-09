@@ -3,6 +3,8 @@
 
 #include "StdAfx.h"
 
+//#include "SharedData.h"
+
 #include "CapstoneCppClient.h"
 
 #include "EClientSocket.h"
@@ -42,7 +44,7 @@
 #include <unordered_map>
 
 const int PING_DEADLINE = 2; // seconds
-const int SLEEP_BETWEEN_PINGS = 30; // seconds
+const int SLEEP_BETWEEN_PINGS = 15; // seconds
 
 ///////////////////////////////
 //OUR GLOBAL VARIABLES
@@ -74,6 +76,7 @@ int postOrderTickID = 2000;
 double comboLimitPrice;
 double currentOrderID;
 
+//extern SharedData sharedData;
 
 ///////////////////////////////////////////////////////////
 // member funcs
@@ -147,7 +150,7 @@ void CapstoneCppClient::processMessages()
 {
 	time_t now = time(NULL);
 	//printf("\nHit at start of process messages check order where nextvalidID is called\n");
-	//printf("\nm_state value: %o\n",m_state);
+	printf("\nm_state value: %o\n",m_state);
 	//printf("\nm_state TEST value: %o\n", ST_OPTIONSOPERATIONS_ACK);
 	//printf("m_orderId value: %o\n\n", m_orderId);
 
@@ -238,7 +241,7 @@ void CapstoneCppClient::processMessages()
 			break;
 		case ST_IDLE:
 			if( m_sleepDeadline < now) {
-				m_state = ST_PING;
+				m_state = ST_USERINPUT;
 				return;
 			}
 			break;
@@ -270,6 +273,7 @@ void CapstoneCppClient::processMessages()
 			placeComboOrder();
 			break;
 		case ST_COMBOORDER_ACK:
+			m_state = ST_PING;
 			break;
 	}
 
@@ -482,6 +486,22 @@ void CapstoneCppClient::placeSingleOrder() {
 	m_state = ST_SINGLEORDER_ACK;
 }
 void CapstoneCppClient::placeComboOrder() {
+
+	//////////
+		// Access the shared data
+	//int frontDTE = sharedData.frontDTE;
+	//int backDTE = sharedData.backDTE;
+	//int entryHour = sharedData.entryHour;
+	//int entryMin = sharedData.entryMin;
+	//int exitHour = sharedData.exitHour;
+	//int exitMin = sharedData.exitMin;
+	//double takeProfit = sharedData.takeProfit;
+	//double stopLoss = sharedData.stopLoss;
+	//double entryPrice = sharedData.entryPrice;
+	////////////////
+
+
+
 	printf("I Combo Order Method\n\n");
 	std::this_thread::sleep_for(std::chrono::seconds(3));//
 
@@ -840,6 +860,12 @@ void CapstoneCppClient::execDetailsEnd(int reqId) {
 	printf("We have hit ExecDetailsEnd. %d\n", reqId);
 }
 //! [execdetailsend]
+
+//! [commissionreport]
+void CapstoneCppClient::commissionReport(const CommissionReport& commissionReport) {
+	printf("CommissionReport. %s - %s %s RPNL %s\n", commissionReport.execId.c_str(), Utils::doubleMaxString(commissionReport.commission).c_str(), commissionReport.currency.c_str(), Utils::doubleMaxString(commissionReport.realizedPNL).c_str());
+}
+//! [commissionreport]
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void CapstoneCppClient::pnlOperation()
@@ -1485,12 +1511,6 @@ void CapstoneCppClient::tickSnapshotEnd(int reqId) {
 	printf( "TickSnapshotEnd: %d\n", reqId);
 }
 //! [ticksnapshotend]
-
-//! [commissionreport]
-void CapstoneCppClient::commissionReport( const CommissionReport& commissionReport) {
-    printf( "CommissionReport. %s - %s %s RPNL %s\n", commissionReport.execId.c_str(), Utils::doubleMaxString(commissionReport.commission).c_str(), commissionReport.currency.c_str(), Utils::doubleMaxString(commissionReport.realizedPNL).c_str());
-}
-//! [commissionreport]
 
 //! [position]
 void CapstoneCppClient::position( const std::string& account, const Contract& contract, Decimal position, double avgCost) {
