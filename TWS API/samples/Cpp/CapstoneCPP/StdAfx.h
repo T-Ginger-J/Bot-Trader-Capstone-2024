@@ -4,6 +4,7 @@
 #pragma once
 #ifndef TEST_CPP_CLIENT_STDAFX_H
 #define TEST_CPP_CLIENT_STDAFX_H
+#define _CRT_SECURE_NO_WARNINGS
 
 #include "client/StdAfx.h"
 #include <thread>

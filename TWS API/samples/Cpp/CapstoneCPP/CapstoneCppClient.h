@@ -12,6 +12,8 @@
 #include <memory>
 #include <vector>
 
+#include "message_queue.h"
+
 class EClientSocket;
 
 enum State {
@@ -67,7 +69,11 @@ enum State {
 	ST_COMBOPRICE,
 	ST_COMBOPRICE_ACK,
 	ST_ADJUSTORDER,
-	ST_ADJUSTORDER_ACK
+	ST_ADJUSTORDER_ACK,
+	ST_SINGLEINFO,
+
+	ST_WAITFORINPUT,
+
 };
 
 //! [ewrapperimpl]
@@ -135,7 +141,11 @@ private:
 	void placeSingleOrder();
 	void placeComboOrder();
 
+	void getSingleOrderInfo();
+
 	void getAllExecutions();
+
+	void waitForGuiData();
 	//////////////////////////////////////////////////
 public:
 	// events
@@ -166,3 +176,4 @@ private:
 
 #endif
 
+time_t parseDate(const std::string& dateStr);
