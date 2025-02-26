@@ -83,7 +83,9 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)\..\..\..\source\CppClient\client\lib\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libbid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libbid.lib;shlwapi.lib;Comctl32.lib
+;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ShowProgress>LinkVerbose</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">

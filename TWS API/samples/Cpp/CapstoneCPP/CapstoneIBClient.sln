@@ -4,6 +4,7 @@ VisualStudioVersion = 17.0.32014.148
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CapstoneIbClientDynamic", "TestCppClient.vcxproj", "{458559CA-82CB-46EA-A45C-2E9DA3927D42}"
 	ProjectSection(ProjectDependencies) = postProject
+		{256E5E0B-3FD4-49E3-B7F2-2995AC60721D} = {256E5E0B-3FD4-49E3-B7F2-2995AC60721D}
 		{E9C3126E-CEA8-41A8-A714-7644B016DB3C} = {E9C3126E-CEA8-41A8-A714-7644B016DB3C}
 	EndProjectSection
 EndProject

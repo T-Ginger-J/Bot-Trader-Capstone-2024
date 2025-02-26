@@ -45,6 +45,8 @@
 #include <string>
 #include <cstdlib>
 #include <stdlib.h>
+#include <iomanip>  
+#include <sstream> 
 
 
 const int PING_DEADLINE = 2; // seconds
@@ -54,8 +56,8 @@ const int SLEEP_BETWEEN_PINGS = 15; // seconds
 //OUR GLOBAL VARIABLES
 bool isFulfilled = false;
 bool isComboCheck = false;
-bool isSingleOrder = false;
 bool getIndexValue = true;
+
 int underlyingConId;
 int legOneConId = 0;
 int legTwoConId = 0;
@@ -65,28 +67,28 @@ double currentBidPrice;
 double currentAskPrice;
 double currentMarketPrice;
 
-
-double userStrikePriceSingle;
-std::string userDTESingle;
-std::string userCallOrPutSingle;
-
-double userStrikePriceCombo1;
-std::string userDTECombo1;
-std::string userCallOrPutCombo1;
+double userStrikePriceLeg1;
+std::string userDTELeg1;
+std::string userCallOrPutLeg1;
 std::string actionLeg1;
 
-double userStrikePriceCombo2;
-std::string userDTECombo2;
-std::string userCallOrPutCombo2;
+double userStrikePriceLeg2;
+std::string userDTELeg2;
+std::string userCallOrPutLeg2;
 std::string actionLeg2;
 
+double takeProfitPercentage;
+double stopLossPercentage;
+
 std::unordered_map<OrderId, Contract> contractMap;
+
+std::unordered_map<time_t, Message> pendingOrderMap;
+
+time_t currentOrderFromMap;
 
 int postOrderTickID = 2000;
 double comboLimitPrice;
 double currentOrderID;
-
-//extern SharedData sharedData;
 
 ///////////////////////////////////////////////////////////
 // member funcs
@@ -165,26 +167,6 @@ void CapstoneCppClient::processMessages()
 	//printf("m_orderId value: %o\n\n", m_orderId);
 
 	switch (m_state) {
-		case ST_PNLSINGLE:
-			pnlSingleOperation();
-			break;
-		case ST_PNLSINGLE_ACK:
-			break;
-		case ST_PNL:
-			pnlOperation();
-			break;
-		case ST_PNL_ACK:
-			break;
-		case ST_REALTIMEBARS:
-			realTimeBars();
-			break;
-		case ST_REALTIMEBARS_ACK:
-			break;
-		case ST_MARKETDATATYPE:
-			marketDataType();
-			break;
-		case ST_MARKETDATATYPE_ACK:
-			break;
 		case ST_HISTORICALDATAREQUESTS:
 			historicalDataRequests();
 			break;
@@ -210,19 +192,6 @@ void CapstoneCppClient::processMessages()
 			break;
 		case ST_BRACKETSAMPLES_ACK:
 			break;
-		case ST_SYMBOLSAMPLES:
-			reqMatchingSymbols();
-			break;
-		case ST_SYMBOLSAMPLES_ACK:
-			break;
-		case ST_REQSMARTCOMPONENTS:
-			reqSmartComponents();
-			break;
-		case ST_REQSMARTCOMPONENTS_ACK:
-			break;
-		case ST_REQHISTOGRAMDATA:
-			reqHistogramData();
-			break;
         case ST_REQHISTORICALTICKS:
             reqHistoricalTicks();
             break;
@@ -233,11 +202,7 @@ void CapstoneCppClient::processMessages()
 			break;
 		case ST_REQTICKBYTICKDATA_ACK:
 			break;
-		case ST_WHATIFSAMPLES:
-			whatIfSamples();
-			break;
-		case ST_WHATIFSAMPLES_ACK:
-			break;
+
 		case ST_PING:
 			reqCurrentTime();
 			break;
@@ -251,7 +216,7 @@ void CapstoneCppClient::processMessages()
 			break;
 		case ST_IDLE:
 			if( m_sleepDeadline < now) {
-				m_state = ST_USERINPUT;
+				m_state = ST_WAITFORINPUT;
 				return;
 			}
 			break;
@@ -264,7 +229,6 @@ void CapstoneCppClient::processMessages()
 			break;
 
 		case ST_USERINPUT:
-			getUserInput();
 			break;
 
 		case ST_COMBOPRICE:
@@ -274,7 +238,6 @@ void CapstoneCppClient::processMessages()
 			break;
 
 		case ST_SINGLEORDER:
-			placeSingleOrder();
 			break;
 		case ST_SINGLEORDER_ACK:
 			m_state = ST_PING;
@@ -286,12 +249,12 @@ void CapstoneCppClient::processMessages()
 		case ST_COMBOORDER_ACK:
 			m_state = ST_PING;
 			break;
-		case ST_SINGLEINFO:
-			getSingleOrderInfo();
+		case ST_COMBOINFO:
+			getComboOrder();
 			break;
 
 		case ST_WAITFORINPUT:
-			waitForGuiData();
+			waitForGuiDataAndTime();
 			break;
 	}
 
@@ -302,6 +265,8 @@ void CapstoneCppClient::processMessages()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //OUR METHODS HERE
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+////////////HELPER METHODS START
 time_t parseDate(const std::string& dateStr) {
 	struct tm tm = {};
 
@@ -326,36 +291,97 @@ std::string wstringToString(const std::wstring& wstr) {
 	return str;
 }
 
-void CapstoneCppClient::waitForGuiData() {
-	printf("Waiting for Gui Data\n");
-	if (!messageQueue.isEmpty()) {
-		getSingleOrder();
+time_t CapstoneCppClient::parseActivationTime(const Message& msg) {
+	std::wstring ws = msg.activationTime;
+	std::string timeStr(ws.begin(), ws.end());
+
+	// Parse "YYYYMMDD HH:MM:SS"
+	struct tm tm = {};
+	std::istringstream ss(timeStr);
+
+	ss >> std::get_time(&tm, "%Y%m%d %H:%M:%S");
+	if (ss.fail()) {
+		printf("Failed to parse activation time: %s\n", timeStr.c_str());
+		return 0;
 	}
+
+	return _mkgmtime(&tm) - CapstoneCppClient::getTzOffset(msg.timeZone);
+}
+
+int CapstoneCppClient::getTzOffset(const std::wstring& tz) {
+	_tzset(); 
+	long timezoneSec;
+	_get_timezone(&timezoneSec);
+	int daylight;
+	_get_daylight(&daylight);
+	return -timezoneSec + (daylight ? 3600 : 0);
+}
+
+////////////HELPER METHODS END
+
+void CapstoneCppClient::waitForGuiDataAndTime() {
+	static std::vector<Message> pendingMessages;
+
+	while (!messageQueue.isEmpty()) {
+		Message msg = messageQueue.pop();
+		msg.scheduledTime = parseActivationTime(msg);
+		pendingMessages.push_back(msg);
+		//messageQueue.push(msg);
+		printf("Received order scheduled for: %s",
+			std::ctime(&msg.scheduledTime));
+		pendingOrderMap[msg.scheduledTime] = msg;
+
+	}
+
+	time_t now = time(nullptr);
 	
+	//CLOSING DAY CHECK AND LOGIC WILL BE BELOW
+	/*std::tm now_tm = *std::localtime(&now);
+	// Set the target time (3:50 PM of the current day)
+	std::tm target_tm = now_tm; // Copy the current time
+	target_tm.tm_hour = 15;    // 3 PM
+	target_tm.tm_min = 50;      // 50 minutes
+	target_tm.tm_sec = 0;       // 0 seconds
+
+	// Convert target time to time_t for comparison
+	time_t target_time = mktime(&target_tm);
+
+	if (now >= target_time) {
+		printf("\n=== MARKET CLOSING TIME (3:50 PM) REACHED ===\n");
+
+		//////////
+		//CLOSE POSITIONS HERE
+		///////////
+
+		return; 
+	}*/
+
+	auto it = pendingMessages.begin();
+	while (it != pendingMessages.end()) {
+		if (now >= it->scheduledTime && !it->processed) {
+			printf("\n=== ACTIVATING ORDER SCHEDULED FOR %s ===\n",
+				std::ctime(&it->scheduledTime));
+
+			it->processed = true;
+
+			currentOrderFromMap = it->scheduledTime;
+
+			it = pendingMessages.erase(it);
+
+			optionsOperations();
+			return;
+		}
+		else {
+			++it;
+		}
+	}
+
+
+
+	printf("No scheduled orders ready - waiting for input\n");
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 }
 
-void CapstoneCppClient::getUserInput() { //GET USER CHOICE FOR SINGLE OR COMBO ORDER ?? WILL NEED TO BE Ported AND REMOVED TO OTHER FUNC
-	printf("In User Input Method \n\n");
-	std::this_thread::sleep_for(std::chrono::seconds(2));//
-
-	std::string singleOrCombo;
-	printf("Make your Choice of either 'S' for Single Order or 'C' for Combo Order or R: ");
-	std::cin >> singleOrCombo;
-
-	if (singleOrCombo.compare("S") == 0) {
-		isComboCheck = false;
-		getSingleOrder();
-	}
-	else if (singleOrCombo.compare("C") == 0) {
-		isComboCheck = true;
-		getComboOrder();
-	}
-	else if (singleOrCombo.compare("R") == 0) {///  TEMP FOR TESTING RETRIVE EXECUTIONS
-		isComboCheck = false;
-		getAllExecutions();
-	}
-
-}
 
 void CapstoneCppClient::optionsOperations()//REQUEST INITAL SPX INFORMATION TO GET CONID
 {
@@ -370,110 +396,70 @@ void CapstoneCppClient::optionsOperations()//REQUEST INITAL SPX INFORMATION TO G
 
 	std::this_thread::sleep_for(std::chrono::seconds(2));
 
-	m_state = ST_SINGLEINFO;
+	//m_state = ST_COMBOINFO;
 }
 
-void CapstoneCppClient::getAllExecutions() {
-	m_pClient->reqExecutions(10001, ExecutionFilter());
-	std::cout << "Requested execution data" << std::endl;
-	m_state = ST_PING;
-}
-
-void CapstoneCppClient::getSingleOrder() {// GET INFORMATION FROM USER FOR SINGLE ORDER
-
-	Message msg = messageQueue.pop();
-
-	double userStrikePrice;
-	std::string userDTE = "20250319";
-	std::string userCallOrPut = "C";
-
-	
-	/*printf("\nEnter the +/- You Want From Current Strike: "); //USER INPUT CODE HERE UNCOMMENT WHEN READY TO USE TEST VALUES ABOVE
-	std::cin >> userStrikePrice;
-	printf("Enter the Expiration Date in form YYYYMMDD: ");
-	std::cin >> userDTE;
-	printf("Enter 'C' to set a Call Option or 'P' to set a Put Option: ");
-	std::cin >> userCallOrPut; 
-
-	userStrikePriceSingle = userStrikePrice;
-	userDTESingle = userDTE;
-	userCallOrPutSingle = userCallOrPut; */
-
-	userStrikePriceSingle = msg.frontStrikeChangeAmt;
-	userDTESingle = std::to_string(msg.frontDTE);
-	userCallOrPutSingle = wstringToString(msg.frontOption).c_str();
-
-	printf("Call or Put Value: %s\n", userCallOrPutSingle.c_str());
-	printf("Call or Put Value: %ls\n", msg.frontOption.c_str());
-
-	m_state = ST_OPTIONSOPERATIONS;
-///
-
-
-}
-void CapstoneCppClient::getSingleOrderInfo() {
-	userStrikePriceSingle = spxCurrentPrice + userStrikePriceSingle;
-	userStrikePriceSingle = ((userStrikePriceSingle + 2) / 5) * 5;
-
-	printf("Using Strike of: %f \n", userStrikePriceSingle);
-
-	Contract optionContract = ContractSamples::SingleSPXContract(userStrikePriceSingle, userDTESingle, userCallOrPutSingle);
-
-	m_pClient->reqMarketDataType(2); //REMOVE WHEN TESTIG WITH PROF
-	std::this_thread::sleep_for(std::chrono::seconds(4));
-	m_pClient->reqMktData(4, optionContract, "", false, false, TagValueListSPtr());
-	std::this_thread::sleep_for(std::chrono::seconds(4));//
-	m_pClient->cancelMktData(4);
-	isSingleOrder = true;
-
-}
 void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO ORDER
-	double userStrikePrice1 = 6025.00;
-	std::string userDTE1 = "20241119";
-	std::string userCallOrPut1 = "C";
-	std::string action1 = "SELL";
 
-	double userStrikePrice2 = 6025.00;
-	std::string userDTE2 = "20241120";
-	std::string userCallOrPut2 = "C";
-	std::string action2 = "BUY";
-	
-	printf("\nEnter the Strike Price of Leg 1 in Decimal Form: "); //USER INPUT CODE HERE UNCOMMENT WHEN READY TO USE TEST VALUES ABOVE
-	std::cin >> userStrikePrice1;
-	printf("Enter the Expiration Date of Leg 1 in form YYYYMMDD: ");
-	std::cin >> userDTE1;
-	printf("Enter 'C' to set a Call Option or 'P' to set a Put Option for Leg 1: ");
-	std::cin >> userCallOrPut1;
-	printf("Enter 'BUY' or 'SELL' to set Action for Leg 1: ");
-	std::cin >> action1;
+	Message msg = pendingOrderMap[currentOrderFromMap];
+	pendingOrderMap.erase(currentOrderFromMap);
 
-	printf("\nEnter the Strike Price of Leg 2 in Decimal Form: ");
-	std::cin >> userStrikePrice2;
-	printf("Enter the Expiration Date of Leg 2 in form YYYYMMDD: ");
-	std::cin >> userDTE2;
-	printf("Enter 'C' to set a Call Option or 'P' to set a Put Option for Leg 2: ");
-	std::cin >> userCallOrPut2;
-	printf("Enter 'BUY' or 'SELL' to set Action for Leg 1: ");
-	std::cin >> action2; 
+	auto now = std::chrono::system_clock::now();
 
-	userStrikePriceCombo1 = userStrikePrice1;
-	userDTECombo1 = userDTE1;
-	userCallOrPutCombo1 = userCallOrPut1;
-	actionLeg1 = action1;
+	auto expirationDateLeg1 = now + std::chrono::hours(24 * msg.frontDTE); // Add days to current date
+	std::time_t expirationTimeLeg1 = std::chrono::system_clock::to_time_t(expirationDateLeg1);
+	std::tm expirationTmLeg1 = *std::localtime(&expirationTimeLeg1);
 
-	userStrikePriceCombo2 = userStrikePrice2;
-	userDTECombo2 = userDTE2;
-	userCallOrPutCombo2 = userCallOrPut2;
-	actionLeg2 = action2;
+	char bufferLeg1[9]; // YYYYMMDD + null terminator
+	std::strftime(bufferLeg1, sizeof(bufferLeg1), "%Y%m%d", &expirationTmLeg1);
+	userDTELeg1 = bufferLeg1;
 
+	auto expirationDateLeg2 = now + std::chrono::hours(24 * msg.backDTE); // Add days to current date
+	std::time_t expirationTimeLeg2 = std::chrono::system_clock::to_time_t(expirationDateLeg2);
+	std::tm expirationTmLeg2 = *std::localtime(&expirationTimeLeg2);
+
+	char bufferLeg2[9]; // YYYYMMDD + null terminator
+	std::strftime(bufferLeg2, sizeof(bufferLeg2), "%Y%m%d", &expirationTmLeg2);
+	userDTELeg2 = bufferLeg2;
+
+	printf("Leg 1 EXP Date: %s \n", userDTELeg1.c_str());
+	printf("Leg 2 EXP Date: %s \n", userDTELeg2.c_str());
+
+	userStrikePriceLeg1 = msg.frontStrikeChangeAmt;
+	userStrikePriceLeg1 = spxCurrentPrice + userStrikePriceLeg1;
+	userStrikePriceLeg1 = 5 * floor(abs(userStrikePriceLeg1 / 5));
+
+	printf("Leg 1 Using Strike of: %f \n", userStrikePriceLeg1);
+
+	userCallOrPutLeg1 = wstringToString(msg.frontOption).c_str();
+	actionLeg1 = wstringToString(msg.frontAction).c_str();
+
+	userStrikePriceLeg2 = msg.frontStrikeChangeAmt;
+	userStrikePriceLeg2 = spxCurrentPrice + userStrikePriceLeg2;
+	userStrikePriceLeg2 = 5 * floor(abs(userStrikePriceLeg2 / 5));
+
+	printf("Leg 2 Using Strike of: %f \n", userStrikePriceLeg2);
+
+	userCallOrPutLeg2 = wstringToString(msg.backOption).c_str();
+	actionLeg2 = wstringToString(msg.backAction).c_str();
+
+	printf("Call or Put Value leg 1: %s\n", userCallOrPutLeg1.c_str());
+	printf("Action Leg1: %ls\n", msg.frontAction.c_str());
+
+	printf("Call or Put Value leg 2: %s\n", userCallOrPutLeg2.c_str());
+	printf("Action Leg2: %ls\n\n", msg.backAction.c_str());
+
+	takeProfitPercentage = 0.10;// HARD CODED FOR NOW NEED TO GET THIS FROM GUI
+	stopLossPercentage = 0.10;
+	/////////////////////////////////////////////////////////
 	Contract optionContract1;
 	optionContract1.symbol = "SPX";
 	optionContract1.secType = "OPT";
 	optionContract1.exchange = "CBOE";
 	optionContract1.currency = "USD";
-	optionContract1.lastTradeDateOrContractMonth = userDTE1;  // Expiration date (YYYYMMDD)
-	optionContract1.strike = userStrikePrice1;  // Example strike price
-	optionContract1.right = userCallOrPut1;  // "C" for Call, "P" for Put
+	optionContract1.lastTradeDateOrContractMonth = userDTELeg1;  // Expiration date (YYYYMMDD)
+	optionContract1.strike = userStrikePriceLeg1;  // Example strike price
+	optionContract1.right = userCallOrPutLeg1;  // "C" for Call, "P" for Put
 	optionContract1.multiplier = "100";
 	optionContract1.tradingClass = "SPXW";
 
@@ -482,78 +468,57 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 	optionContract2.secType = "OPT";
 	optionContract2.exchange = "CBOE";
 	optionContract2.currency = "USD";
-	optionContract2.lastTradeDateOrContractMonth = userDTE2;  // Expiration date (YYYYMMDD)
-	optionContract2.strike = userStrikePrice2;  // Example strike price
-	optionContract2.right = userCallOrPut2;  // "C" for Call, "P" for Put
+	optionContract2.lastTradeDateOrContractMonth = userDTELeg2;  // Expiration date (YYYYMMDD)
+	optionContract2.strike = userStrikePriceLeg2;  // Example strike price
+	optionContract2.right = userCallOrPutLeg2;  // "C" for Call, "P" for Put
 	optionContract2.multiplier = "100";
 	optionContract2.tradingClass = "SPXW";
 
 	m_pClient->reqContractDetails(1000, optionContract1);
 	std::this_thread::sleep_for(std::chrono::seconds(2));//
 	m_pClient->reqContractDetails(1001, optionContract2);
-	std::this_thread::sleep_for(std::chrono::seconds(4));//
+	std::this_thread::sleep_for(std::chrono::seconds(2));//
 
 
 	m_state = ST_COMBOPRICE;
 }
+
 void CapstoneCppClient::getComboPrices() {
 	m_pClient->reqMktData(5, ContractSamples::SPXComboContract(legOneConId,actionLeg1 ,legTwoConId, actionLeg2), "", false, false, TagValueListSPtr());
-	std::this_thread::sleep_for(std::chrono::seconds(4));//
+	std::this_thread::sleep_for(std::chrono::seconds(5));//
 	m_pClient->cancelMktData(5);
 
 	m_state = ST_COMBOORDER;
 }
 
-void CapstoneCppClient::placeSingleOrder() { 
-	printf("IN Single Order Method\n");
-	std::this_thread::sleep_for(std::chrono::seconds(3));//
 
-	Contract contract = ContractSamples::SingleSPXContract(userStrikePriceSingle,userDTESingle,userCallOrPutSingle);
-
-	double limitPrice = currentBidPrice;
-	printf("\nThe Limit Price for the Order will Be %f",limitPrice);
-
-
-	// Define the Order
-	Order order;
-	order.action = "BUY";                          // Buy action
-	order.orderType = "LMT";                       // Order type: Limit (you could use "MKT" for market order)
-	order.totalQuantity = DecimalFunctions::stringToDecimal("1.0");      // NEED TO USE stringToDECIMAL HERE
-	order.lmtPrice = limitPrice;
-
-	comboLimitPrice = limitPrice;// USED FOR TESTING HERE
-
-	currentOrderID = m_orderId;
-	contractMap[m_orderId] = contract;
-	m_pClient->placeOrder(m_orderId++, contract, order);
-	std::this_thread::sleep_for(std::chrono::seconds(2));
-	m_state = ST_SINGLEORDER_ACK;
-}
 void CapstoneCppClient::placeComboOrder() {
 
-
-	printf("I Combo Order Method\n\n");
-	std::this_thread::sleep_for(std::chrono::seconds(3));//
+	printf("In Combo Order Method\n\n");
+	std::this_thread::sleep_for(std::chrono::seconds(2));//
 
 	Contract comboContract = ContractSamples::SPXComboContract(legOneConId,actionLeg1,legTwoConId,actionLeg2);
 
-	std::string choice;
-	printf("Enter 'T' If you would like to Set TakeProfit/StopLoss: ");
-	std::cin >> choice;
+	comboLimitPrice = currentBidPrice;
+	if (currentBidPrice == 0.00) {
+		m_state = ST_COMBOPRICE;
+		return;
+	}
 
-	double limitPrice;
-	printf("\nEnter the Limit Price for the Combo Order: ");
-	std::cin >> limitPrice;
-	comboLimitPrice = limitPrice;
+	if (1 == 1) { // MAKE TRUE FOR NOW
 
-	if (choice.compare("T") == 0) {
 		double takeProfitPrice;
-		printf("\nEnter the Take Profit Price for the Combo: ");
-		std::cin >> takeProfitPrice;
+		takeProfitPrice = comboLimitPrice * (1 + takeProfitPercentage);
+		takeProfitPrice = round(takeProfitPrice / 0.05) * 0.05;
 
 		double stopLossPrice;
-		printf("\nEnter the Stop Loss Price for the Combo: ");
-		std::cin >> stopLossPrice;
+		stopLossPrice = comboLimitPrice * (1 - stopLossPercentage);
+		stopLossPrice = round(stopLossPrice / 0.05) * 0.05;
+
+		printf("Take Profit Set to %f\n",takeProfitPrice);
+		printf("Stop Loss Set to %f\n",stopLossPrice);
+
+		std::this_thread::sleep_for(std::chrono::seconds(15));
 
 		Order parent;
 		Order takeProfit;
@@ -561,7 +526,7 @@ void CapstoneCppClient::placeComboOrder() {
 	
 		currentOrderID = m_orderId;
 		contractMap[m_orderId] = comboContract;
-		OrderSamples::BracketOrder(m_orderId, parent, takeProfit, stopLoss, "BUY", DecimalFunctions::stringToDecimal("1.0"), limitPrice, takeProfitPrice, stopLossPrice);
+		OrderSamples::BracketOrder(m_orderId, parent, takeProfit, stopLoss, "BUY", DecimalFunctions::stringToDecimal("1.0"), comboLimitPrice, takeProfitPrice, stopLossPrice);
 		m_pClient->placeOrder(parent.orderId, comboContract, parent);
 		m_pClient->placeOrder(takeProfit.orderId, comboContract, takeProfit);
 		m_pClient->placeOrder(stopLoss.orderId, comboContract, stopLoss);
@@ -572,15 +537,23 @@ void CapstoneCppClient::placeComboOrder() {
 		comboOrder.action = "BUY";             // Buy action for the combo
 		comboOrder.orderType = "LMT";          // Limit order
 		comboOrder.totalQuantity = DecimalFunctions::stringToDecimal("1.0"); // Quantity for the combo order
-		comboOrder.lmtPrice = limitPrice;           // Set a limit price 
+		comboOrder.lmtPrice = comboLimitPrice;           // Set a limit price 
 		comboOrder.transmit = true;
 
 		currentOrderID = m_orderId;
 		contractMap[m_orderId] = comboContract;
 		m_pClient->placeOrder(m_orderId++, comboContract, comboOrder);
 	}
+	
 
+	isComboCheck = true;
 	m_state = ST_COMBOORDER_ACK;
+}
+
+void CapstoneCppClient::getAllExecutions() {
+	m_pClient->reqExecutions(10001, ExecutionFilter());
+	std::cout << "Requested execution data" << std::endl;
+	m_state = ST_PING;
 }
 
 //! [nextvalidid]
@@ -614,7 +587,6 @@ void CapstoneCppClient::reqCurrentTime()
 
 	m_pClient->reqCurrentTime();
 }
-
 
 void CapstoneCppClient::currentTime( long time)
 {
@@ -688,10 +660,10 @@ void CapstoneCppClient::contractDetailsEnd(int reqId) {
 			contract.currency = "USD";
 			contract.conId = underlyingConId;
 
-			//m_pClient->reqMarketDataType(4); //REMOVE WHEN TESTIG WITH PROF
+			m_pClient->reqMarketDataType(1); //REMOVE WHEN TESTIG WITH PROF
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			m_pClient->reqMktData(2, contract, "", false, false, TagValueListSPtr());
-			std::this_thread::sleep_for(std::chrono::seconds(1));
+			std::this_thread::sleep_for(std::chrono::seconds(2));
 			m_pClient->cancelMktData(2);
 
 		}
@@ -714,21 +686,18 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 	}
 
 
-	if (getIndexValue && (int)field == 9) { //==68 for Juliano account, == 9 for Prof account
+	if (getIndexValue && (int)field == 4) { //==68 for Juliano account, == 4 for Prof account
 		spxCurrentPrice = (int)price;
 		getIndexValue = false;
-		//m_state = ST_USERINPUT;
-		std::cout << "SPX Market Price (Last): " << spxCurrentPrice << std::endl;
+		std::cout << "SPX Index Value (Current): " << spxCurrentPrice << std::endl;
+		m_state = ST_COMBOINFO;
 		return;
 	}
-	else {
+	else if(!getIndexValue) {
 		if ((int)field == 1) { //==66 for Juliano account, == 1 for Prof account
 			std::cout << "Bid: " << price << std::endl;
 			currentBidPrice = price;
-			if (isSingleOrder && !isComboCheck) {
-				m_state = ST_SINGLEORDER;
-				isSingleOrder = false;
-			}
+
 		}
 		else if ((int)field == 2) { //==67 for Juliano account, == 2 for Prof account
 			std::cout << "Ask: " << price << std::endl;
@@ -736,12 +705,22 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 		}
 		else if ((int)field == 9) { //==68 for Juliano account, == 9 for Prof account
 			std::cout << "Market Price (Last): " << price << std::endl;
+			//currentMarketPrice = price;
+		}
+		else if ((int)field == 14) {
+			//std::cout << "Market Price (Current): " << price << std::endl;
+			//currentMarketPrice = price;
+		}
+		else if ((int)field == 4) {
+			std::cout << "Market Price (Current): " << price << std::endl;
 			currentMarketPrice = price;
 		}
 
+		printf("\n\n");
+
 	}
 
-	if (tickerId >= 2000 && (int)field == 2 && !isComboCheck) { //==67 for Juliano account, == 2 for Prof account
+	if (tickerId >= 2000 && (int)field == 2 && isComboCheck) { //==67 for Juliano account, == 2 for Prof account
 
 		printf("Recgonized request ID of > 2000\n");
 
@@ -749,22 +728,54 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 
 			std::this_thread::sleep_for(std::chrono::seconds(5));//
 
-			double newLimit = comboLimitPrice + 0.1;
+			double newLimit = comboLimitPrice + 0.05;
 			printf("Adjusting Limit Price from: %f to: %f\n", comboLimitPrice, newLimit);
 			comboLimitPrice = newLimit;
-			Contract adjustContract = contractMap[currentOrderID];
 
+			double newTakeProfitPrice;
+			newTakeProfitPrice = comboLimitPrice * (1 + takeProfitPercentage);
+			newTakeProfitPrice = round(newTakeProfitPrice / 0.05) * 0.05;
 
+			double newStopLossPrice;
+			newStopLossPrice = comboLimitPrice * (1 - stopLossPercentage);
+			newStopLossPrice = round(newStopLossPrice / 0.05) * 0.05;
 
-			Order adjustedOrder;
-			adjustedOrder.orderId = currentOrderID;  // Keep the same order ID if updating
-			adjustedOrder.action = "BUY";
-			adjustedOrder.orderType = "LMT";
-			adjustedOrder.totalQuantity = DecimalFunctions::stringToDecimal("1.0");
-			adjustedOrder.lmtPrice = newLimit;
+			Contract contractToAdjust = contractMap[currentOrderID];
 
+			OrderCancel oc;
+			oc.manualOrderCancelTime = "";
+			m_pClient->cancelOrder(currentOrderID, oc);    // Cancel parent
+			m_pClient->cancelOrder(currentOrderID + 1, oc); // Cancel take profit
+			m_pClient->cancelOrder(currentOrderID + 2 ,oc); // Cancel stop loss
 
-			m_pClient->placeOrder(currentOrderID, adjustContract, adjustedOrder); //ADD BACK WHEN TESTING ADJUSTING SINGLE ORDER
+			Order adjustedParent;
+			Order adjustedTakeProfit;
+			Order adjustedStopLoss;
+
+			OrderSamples::BracketOrder(m_orderId,
+				adjustedParent,
+				adjustedTakeProfit,
+				adjustedStopLoss,
+				"BUY",
+				DecimalFunctions::stringToDecimal("1.0"),
+				newLimit,
+				newTakeProfitPrice,
+				newStopLossPrice);
+
+			m_pClient->placeOrder(adjustedParent.orderId, contractToAdjust, adjustedParent);
+			m_pClient->placeOrder(adjustedTakeProfit.orderId, contractToAdjust, adjustedTakeProfit);
+			m_pClient->placeOrder(adjustedStopLoss.orderId, contractToAdjust, adjustedStopLoss);
+
+			contractMap[adjustedParent.orderId] = contractToAdjust;
+			currentOrderID = adjustedParent.orderId;  
+			comboLimitPrice = newLimit;
+
+			printf("New orders placed with IDs: Parent=%d, TP=%d, SL=%d\n",
+				adjustedParent.orderId,
+				adjustedTakeProfit.orderId,
+				adjustedStopLoss.orderId);
+
+			m_orderId = adjustedStopLoss.orderId + 1;
 			m_state = ST_ADJUSTORDER;
 			return;
 		}
@@ -772,10 +783,6 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 		// CHANGE IF NEEDED
 		m_state = ST_WAITFORINPUT;
 	} 
-	if (tickerId >= 2000 && isComboCheck) {
-		//m_state = ST_OPTIONSOPERATIONS;
-		m_state = ST_PING;
-	}
 
 }
 //! [tickprice]
@@ -873,6 +880,15 @@ void CapstoneCppClient::openOrderEnd() {
 //! [execdetails]
 void CapstoneCppClient::execDetails(int reqId, const Contract& contract, const Execution& execution) {
 	printf("Data Found: ExecDetails. ReqId: %d - %s, %s, %s - %s, %s, %s, %s, %s, %s, %s\n", reqId, contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), Utils::llongMaxString(execution.permId).c_str(), execution.execId.c_str(), Utils::longMaxString(execution.orderId).c_str(), DecimalFunctions::decimalStringToDisplay(execution.shares).c_str(), DecimalFunctions::decimalStringToDisplay(execution.cumQty).c_str(), Utils::intMaxString(execution.lastLiquidity).c_str(), (execution.pendingPriceRevision ? "yes" : "no"));
+	
+	//TEST TO OUTPUT EXEC DETAILS TO A FILE
+	std::ofstream ExecOutputFile;
+	ExecOutputFile.open("ExecOutputs.csv");
+	ExecOutputFile << "Symbol,Currency,OrderID \n";
+	ExecOutputFile << contract.symbol.c_str() << ",";
+	ExecOutputFile << contract.currency.c_str() << ",";
+	ExecOutputFile << Utils::longMaxString(execution.orderId).c_str() << "\n";
+	ExecOutputFile.close();
 }
 //! [execdetails]
 
@@ -887,66 +903,20 @@ void CapstoneCppClient::commissionReport(const CommissionReport& commissionRepor
 	printf("CommissionReport. %s - %s %s RPNL %s\n", commissionReport.execId.c_str(), Utils::doubleMaxString(commissionReport.commission).c_str(), commissionReport.currency.c_str(), Utils::doubleMaxString(commissionReport.realizedPNL).c_str());
 }
 //! [commissionreport]
+ 
+ //! [error]
+void CapstoneCppClient::error(int id, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson)
+{
+	if (!advancedOrderRejectJson.empty()) {
+		printf("Error. Id: %d, Code: %d, Msg: %s, AdvancedOrderRejectJson: %s\n", id, errorCode, errorString.c_str(), advancedOrderRejectJson.c_str());
+	}
+	else {
+		printf("Error. Id: %d, Code: %d, Msg: %s\n", id, errorCode, errorString.c_str());
+	}
+}
+//! [error]
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-void CapstoneCppClient::pnlOperation()
-{
-	//! [reqpnl]
-	m_pClient->reqPnL(7001, "DUD00029", "");
-	//! [reqpnl]
-
-	std::this_thread::sleep_for(std::chrono::seconds(2));
-
-	//! [cancelpnl]
-	m_pClient->cancelPnL(7001);
-	//! [cancelpnl] 
-
-	m_state = ST_PNL_ACK;
-}
-
-void CapstoneCppClient::pnlSingleOperation()
-{
-	//! [reqpnlsingle]
-	m_pClient->reqPnLSingle(7002, "DUD00029", "", 268084);
-	//! [reqpnlsingle]
-
-	std::this_thread::sleep_for(std::chrono::seconds(2));
-
-	//! [cancelpnlsingle]
-	m_pClient->cancelPnLSingle(7002);
-	//! [cancelpnlsingle]
-
-	m_state = ST_PNLSINGLE_ACK;
-}
-
-void CapstoneCppClient::realTimeBars()
-{
-	/*** Requesting real time bars ***/
-	//! [reqrealtimebars]
-	m_pClient->reqRealTimeBars(3001, ContractSamples::EurGbpFx(), 5, "MIDPOINT", true, TagValueListSPtr());
-	//! [reqrealtimebars]
-	std::this_thread::sleep_for(std::chrono::seconds(2));
-	/*** Canceling real time bars ***/
-	//! [cancelrealtimebars]
-	m_pClient->cancelRealTimeBars(3001);
-	//! [cancelrealtimebars]
-
-	m_state = ST_REALTIMEBARS_ACK;
-}
-
-void CapstoneCppClient::marketDataType()
-{
-	//! [reqmarketdatatype]
-	/*** By default only real-time (1) market data is enabled
-		 Sending frozen (2) enables frozen market data
-		 Sending delayed (3) enables delayed market data and disables delayed-frozen market data
-		 Sending delayed-frozen (4) enables delayed and delayed-frozen market data
-		 Sending real-time (1) disables frozen, delayed and delayed-frozen market data ***/
-	m_pClient->reqMarketDataType(2);
-	//! [reqmarketdatatype]
-
-	m_state = ST_MARKETDATATYPE_ACK;
-}
 
 void CapstoneCppClient::historicalDataRequests()
 {
@@ -1090,7 +1060,7 @@ void CapstoneCppClient::ocaSamples() // useful sample
 	m_state = ST_OCASAMPLES_ACK;
 }
 
-//USEFUL EXMAPLE ABOVE
+//USEFUL EXMAPLE ABOVE AND BELOW
 
 void CapstoneCppClient::conditionSamples()
 {
@@ -1140,48 +1110,6 @@ void CapstoneCppClient::bracketSample() { // USEFUL SAMPLE
 	m_state = ST_BRACKETSAMPLES_ACK;
 }
 
-void CapstoneCppClient::reqMatchingSymbols()
-{
-	/*** Request TWS' matching symbols ***/
-	//! [reqmatchingsymbols]
-	m_pClient->reqMatchingSymbols(11001, "IBM");
-	//! [reqmatchingsymbols]
-	m_state = ST_SYMBOLSAMPLES_ACK;
-}
-
-void CapstoneCppClient::reqSmartComponents()
-{
-	static bool bFirstRun = true;
-
-	if (bFirstRun) {
-		m_pClient->reqMktData(13001, ContractSamples::USStockAtSmart(), "", false, false, TagValueListSPtr());
-
-		bFirstRun = false;
-	}
-
-	std::this_thread::sleep_for(std::chrono::seconds(5));
-
-	if (m_bboExchange.size() > 0) {
-		m_pClient->cancelMktData(13001);
-
-		//! [reqsmartcomponents]
-		m_pClient->reqSmartComponents(13002, m_bboExchange);
-		//! [reqsmartcomponents]
-		m_state = ST_REQSMARTCOMPONENTS_ACK;
-	}
-}
-
-void CapstoneCppClient::reqHistogramData() {
-	//! [reqHistogramData]
-	m_pClient->reqHistogramData(15001, ContractSamples::IBMUSStockAtSmart(), false, "1 weeks");
-	//! [reqHistogramData]
-	std::this_thread::sleep_for(std::chrono::seconds(2));
-	//! [cancelHistogramData]
-	m_pClient->cancelHistogramData(15001);
-	//! [cancelHistogramData]
-	m_state = ST_REQHISTOGRAMDATA_ACK;
-}
-
 void CapstoneCppClient::reqHistoricalTicks()
 {
 	//! [reqhistoricalticks]
@@ -1229,30 +1157,15 @@ void CapstoneCppClient::reqTickByTickData()
 	m_state = ST_REQTICKBYTICKDATA_ACK;
 }
 
-void CapstoneCppClient::whatIfSamples()
-{
-	/*** Placing waht-if order ***/
-	//! [whatiforder]
-	m_pClient->placeOrder(m_orderId++, ContractSamples::BondWithCusip(), OrderSamples::WhatIfLimitOrder("BUY", DecimalFunctions::stringToDecimal("100"), 20));
-	//! [whatiforder]
 
-	m_state = ST_WHATIFSAMPLES_ACK;
-}
+
+
+
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OTHER TWS EXAMPLE CALLBACK FUCNTIONS WE MAY OR MAY NOT NEED
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-//! [error]
-void CapstoneCppClient::error(int id, int errorCode, const std::string& errorString, const std::string& advancedOrderRejectJson)
-{
-    if (!advancedOrderRejectJson.empty()) {
-        printf("Error. Id: %d, Code: %d, Msg: %s, AdvancedOrderRejectJson: %s\n", id, errorCode, errorString.c_str(), advancedOrderRejectJson.c_str());
-    } else {
-        printf("Error. Id: %d, Code: %d, Msg: %s\n", id, errorCode, errorString.c_str());
-    }
-}
-//! [error]
 
 void CapstoneCppClient::tickEFP(TickerId tickerId, TickType tickType, double basisPoints, const std::string& formattedBasisPoints,
                             double totalDividends, int holdDays, const std::string& futureLastTradeDate, double dividendImpact, double dividendsToLastTradeDate) {

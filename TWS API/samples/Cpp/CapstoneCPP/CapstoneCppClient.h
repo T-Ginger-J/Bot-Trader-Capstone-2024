@@ -18,10 +18,6 @@ class EClientSocket;
 
 enum State {
 	ST_CONNECT,
-	ST_REALTIMEBARS,
-	ST_REALTIMEBARS_ACK,
-	ST_MARKETDATATYPE,
-	ST_MARKETDATATYPE_ACK,
 	ST_HISTORICALDATAREQUESTS,
 	ST_HISTORICALDATAREQUESTS_ACK,
 	ST_OPTIONSOPERATIONS,
@@ -34,24 +30,12 @@ enum State {
 	ST_BRACKETSAMPLES_ACK,
 	ST_CANCELORDER,
 	ST_CANCELORDER_ACK,
-	ST_SYMBOLSAMPLES,
-	ST_SYMBOLSAMPLES_ACK,
-	ST_REQSMARTCOMPONENTS,
-	ST_REQSMARTCOMPONENTS_ACK,
-	ST_REQHISTOGRAMDATA,
-	ST_REQHISTOGRAMDATA_ACK,
-    ST_PNL,
-    ST_PNL_ACK,
-    ST_PNLSINGLE,
-    ST_PNLSINGLE_ACK,
 	ST_PING,
 	ST_PING_ACK,
     ST_REQHISTORICALTICKS,
     ST_REQHISTORICALTICKS_ACK,
     ST_REQTICKBYTICKDATA,
     ST_REQTICKBYTICKDATA_ACK,
-	ST_WHATIFSAMPLES,
-	ST_WHATIFSAMPLES_ACK,
 	ST_IDLE,
 
 	ST_ORDEROPERATIONS,
@@ -70,7 +54,7 @@ enum State {
 	ST_COMBOPRICE_ACK,
 	ST_ADJUSTORDER,
 	ST_ADJUSTORDER_ACK,
-	ST_SINGLEINFO,
+	ST_COMBOINFO,
 
 	ST_WAITFORINPUT,
 
@@ -98,54 +82,37 @@ public:
 	bool isConnected() const;
 
 private:
-    void pnlOperation();
-    void pnlSingleOperation();
-	void tickDataOperation();
-	void tickOptionComputationOperation();
-	void delayedTickDataOperation();
-	void realTimeBars();
-	void marketDataType();
+
 	void historicalDataRequests();
 	void optionsOperations();
 	void orderOperations();
 	void ocaSamples();
 	void conditionSamples();
 	void bracketSample();
-	void contractOperations();
-	void financialAdvisorOrderSamples();
-	void miscellaneous();
-	void reqFamilyCodes();
 	void reqMatchingSymbols();
-	void reqMktDepthExchanges();
-	void reqNewsTicks();
 	void reqSmartComponents();
-	void reqNewsProviders();
-	void reqNewsArticle();
-	void reqHistoricalNews();
-	void reqHeadTimestamp();
 	void reqHistogramData();
-	void marketRuleOperations();
     void reqHistoricalTicks();
     void reqTickByTickData();
 	void whatIfSamples();
-	void wshCalendarOperations();
 
 	void reqCurrentTime();
 	
 	/////////////////////////////////////////
 	//OUR METHODS STUBS BELOW
-	void getUserInput();
-	void getSingleOrder();
 	void getComboOrder();
 	void getComboPrices();
-	void placeSingleOrder();
+
 	void placeComboOrder();
 
-	void getSingleOrderInfo();
+
 
 	void getAllExecutions();
 
-	void waitForGuiData();
+	time_t parseActivationTime(const Message& msg);
+	int getTzOffset(const std::wstring& tz);
+
+	void waitForGuiDataAndTime();
 	//////////////////////////////////////////////////
 public:
 	// events

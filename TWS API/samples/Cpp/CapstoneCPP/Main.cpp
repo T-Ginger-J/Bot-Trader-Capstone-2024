@@ -1,8 +1,10 @@
-/* Copyright (C) 2024 Interactive Brokers LLC. All rights reserved. This code is subject to the terms
- * and conditions of the IB API Non-Commercial License or the IB API Commercial License, as applicable. */
-
 #define UNICODE
+#define _UNICODE
+
 #include <windows.h>
+#include <direct.h>
+#include <Shlwapi.h>
+#include <commdlg.h>
 
 #include "SharedData.h"
 
@@ -19,6 +21,7 @@
 
 #include "message_queue.h"
 
+#pragma comment(lib, "Shlwapi.lib")
 
 #define ID_START_BUTTON  1
 #define ID_FRONT_OPTION  2
@@ -37,11 +40,10 @@
 #define ID_BACK_STRIKE   15
 #define ID_TAKE_PROFIT   16
 #define ID_STOP_LOSS     17
-#define ID_ENTRY_PRICE   18
-#define ID_FRONT_ACTION  19
-#define ID_BACK_ACTION   20
-#define ID_SAVE_BUTTON   21
-#define ID_LOAD_BUTTON   22
+#define ID_FRONT_ACTION  18
+#define ID_BACK_ACTION   19
+#define ID_SAVE_BUTTON   20
+#define ID_LOAD_BUTTON   21
 
 const unsigned MAX_ATTEMPTS = 50;
 const unsigned SLEEP_TIME = 10;
@@ -49,7 +51,7 @@ const unsigned SLEEP_TIME = 10;
 //MessageQueue messageQueue;
 //////////////////
 
-HWND hFrontDTE, hFrontStrike, hBackDTE, hBackStrike, hEntryHour, hEntryMin, hExitHour, hExitMin, hTP, hSL, hEntryPrice;
+HWND hFrontDTE, hFrontStrike, hBackDTE, hBackStrike, hEntryHour, hEntryMin, hExitHour, hExitMin, hTP, hSL;
 HWND hFrontOption, hFrontAction, hBackOption, hBackAction, hOrderType;
 
 void SetComboBoxSelection(HWND hComboBox, const wchar_t* value) {
@@ -65,73 +67,168 @@ void SetComboBoxSelection(HWND hComboBox, const wchar_t* value) {
 }
 
 void SaveSettings() {
-    _wremove(L"config.txt");
+    // Create "Presets" directory if it doesn't exist
+    if (_wmkdir(L"Presets") != 0 && errno != EEXIST) {
+        // Handle directory creation error
+        MessageBoxW(NULL, L"Failed to create Presets directory.", L"Error", MB_ICONERROR);
+        return;
+    }
+
+    // Ask the user to select a file name
+    OPENFILENAMEW ofn;
+    wchar_t szFile[260];
+
+    // Initialize OPENFILENAME
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = L"CSV Files\0*.csv\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFile[0] = '\0';
+    ofn.lpstrDefExt = L"csv";
+    ofn.lpstrInitialDir = L"Presets\\";
+
+    // Display Save As dialog box
+    if (GetSaveFileNameW(&ofn) == 0) {
+        return; // User cancelled the file dialog
+    }
+
+    // Create the full file path in the "Presets" directory
+    wchar_t filePath[MAX_PATH];
+    wcscpy_s(filePath, L"Presets\\");
+    //PathAppend(filePath, ofn.lpstrFile);
+    wcscat_s(filePath, ARRAYSIZE(filePath), ofn.lpstrFile);
 
 
     FILE* file = NULL;
-    errno_t err = _wfopen_s(&file, L"config.txt", L"w");
+    errno_t err = _wfopen_s(&file, filePath, L"w");
     if (err == 0 && file) {
         wchar_t buffer[100];
 
         // Save the text from the combo boxes
-        GetWindowTextW(hFrontDTE, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hFrontStrike, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hBackDTE, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hBackStrike, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hEntryHour, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hEntryMin, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hExitHour, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hExitMin, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hTP, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hSL, buffer, 10); fwprintf(file, L"%s\n", buffer);
-        GetWindowTextW(hEntryPrice, buffer, 10); fwprintf(file, L"%s\n", buffer);
+#define SAVE_TEXT(hwnd) \
+            memset(buffer, 0, sizeof(buffer)); \
+            GetWindowTextW(hwnd, buffer, 10); \
+            fwprintf(file, L"%s,", buffer[0] ? buffer : L"NULL");
 
+        SAVE_TEXT(hFrontDTE);
+        SAVE_TEXT(hFrontStrike);
+        SAVE_TEXT(hBackDTE);
+        SAVE_TEXT(hBackStrike);
+        SAVE_TEXT(hEntryHour);
+        SAVE_TEXT(hEntryMin);
+        SAVE_TEXT(hExitHour);
+        SAVE_TEXT(hExitMin);
+        SAVE_TEXT(hTP);
+        SAVE_TEXT(hSL);
+
+        // Save the selected indices from combo boxes
         int index = SendMessageW(hFrontOption, CB_GETCURSEL, 0, 0);
-        fwprintf(file, L"%d\n", index);
+        fwprintf(file, L"%d,", index);
 
         index = SendMessageW(hFrontAction, CB_GETCURSEL, 0, 0);
-        fwprintf(file, L"%d\n", index);
+        fwprintf(file, L"%d,", index);
 
         index = SendMessageW(hBackOption, CB_GETCURSEL, 0, 0);
-        fwprintf(file, L"%d\n", index);
+        fwprintf(file, L"%d,", index);
 
         index = SendMessageW(hBackAction, CB_GETCURSEL, 0, 0);
-        fwprintf(file, L"%d\n", index);
+        fwprintf(file, L"%d,", index);
 
         index = SendMessageW(hOrderType, CB_GETCURSEL, 0, 0);
         fwprintf(file, L"%d\n", index);
 
         fclose(file);
     }
+    else {
+        // Display save failed Message
+        MessageBoxW(NULL, L"Failed to save settings.", L"Error", MB_ICONERROR);
+    }
 }
 
 void LoadSettings() {
+    // Ask the user to select a preset file
+    OPENFILENAMEW ofn;
+    wchar_t szFile[260];
+
+    // Initialize OPENFILENAME
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = L"CSV Files\0*.csv\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFile[0] = '\0';
+    ofn.lpstrDefExt = L"csv";
+    ofn.lpstrInitialDir = L"Presets\\";
+
+    // Display open file dialog box
+    if (GetOpenFileNameW(&ofn) == 0) {
+        return; // User cancelled the file dialog
+    }
+
+    // Create the full file path in the "Presets" directory
+    wchar_t filePath[MAX_PATH];
+    wcscpy_s(filePath, L"Presets\\");
+    //PathAppend(filePath, ofn.lpstrFile);
+    wcscat_s(filePath, ARRAYSIZE(filePath), ofn.lpstrFile);
+
     FILE* file = NULL;
-    errno_t err = _wfopen_s(&file, L"config.txt", L"r");
+    errno_t err = _wfopen_s(&file, filePath, L"r");
     if (err == 0 && file) {
         wchar_t buffer[100];
 
-        // Load values into edit controls
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hFrontDTE, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hFrontStrike, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hBackDTE, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hBackStrike, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hEntryHour, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hEntryMin, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hExitHour, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hExitMin, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hTP, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hSL, buffer);
-        if (fgetws(buffer, 10, file)) SetWindowTextW(hEntryPrice, buffer);
+        // Read CSV line
+        if (fgetws(buffer, 100, file)) {
+            wchar_t* context = NULL;
+            wchar_t* token = wcstok_s(buffer, L",", &context);
 
-        int index;
-        if (fwscanf_s(file, L"%d\n", &index) == 1) SendMessageW(hFrontOption, CB_SETCURSEL, index, 0);
-        if (fwscanf_s(file, L"%d\n", &index) == 1) SendMessageW(hFrontAction, CB_SETCURSEL, index, 0);
-        if (fwscanf_s(file, L"%d\n", &index) == 1) SendMessageW(hBackOption, CB_SETCURSEL, index, 0);
-        if (fwscanf_s(file, L"%d\n", &index) == 1) SendMessageW(hBackAction, CB_SETCURSEL, index, 0);
-        if (fwscanf_s(file, L"%d\n", &index) == 1) SendMessageW(hOrderType, CB_SETCURSEL, index, 0);
+
+            // Load text from CSV
+#define LOAD_TEXT(hwnd) \
+                if (token) { \
+                    if (wcscmp(token, L"NULL") == 0) \
+                        SetWindowTextW(hwnd, L""); \
+                    else \
+                        SetWindowTextW(hwnd, token); \
+                    token = wcstok_s(NULL, L",", &context); \
+                }
+
+            LOAD_TEXT(hFrontDTE);
+            LOAD_TEXT(hFrontStrike);
+            LOAD_TEXT(hBackDTE);
+            LOAD_TEXT(hBackStrike);
+            LOAD_TEXT(hEntryHour);
+            LOAD_TEXT(hEntryMin);
+            LOAD_TEXT(hExitHour);
+            LOAD_TEXT(hExitMin);
+            LOAD_TEXT(hTP);
+            LOAD_TEXT(hSL);
+
+
+            // Handle loading indicies
+            int index;
+#define LOAD_INDEX(hwnd) \
+                if (token && swscanf_s(token, L"%d", &index) == 1) { \
+                    SendMessageW(hwnd, CB_SETCURSEL, index, 0); \
+                    token = wcstok_s(NULL, L",", &context); \
+                }
+
+            LOAD_INDEX(hFrontOption);
+            LOAD_INDEX(hFrontAction);
+            LOAD_INDEX(hBackOption);
+            LOAD_INDEX(hBackAction);
+            LOAD_INDEX(hOrderType);
+        }
 
         fclose(file);
+    }
+    else {
+        // Diplay loading failed message
+        MessageBoxW(NULL, L"Failed to load settings.", L"Error", MB_ICONERROR);
     }
 }
 
@@ -151,16 +248,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         SendMessageW(hFrontOption, CB_ADDSTRING, 0, (LPARAM)L"CALL");
         SendMessageW(hFrontOption, CB_ADDSTRING, 0, (LPARAM)L"PUT");
         SendMessageW(hFrontOption, CB_SETCURSEL, 0, 0);
-        CreateWindowW(L"STATIC", L"Expiry Date:", WS_CHILD | WS_VISIBLE,
-            190, 60, 80, 20, hwnd, NULL, NULL, NULL);
+        CreateWindowW(L"STATIC", L"Days to EXP:", WS_CHILD | WS_VISIBLE,
+            190, 60, 90, 20, hwnd, NULL, NULL, NULL);
         hFrontDTE = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER,
             270, 60, 80, 20, hwnd, (HMENU)ID_FRONT_DTE, NULL, NULL);
 
 
         CreateWindowW(L"STATIC", L"Strike+/-", WS_CHILD | WS_VISIBLE,
-            30, 90, 50, 20, hwnd, NULL, NULL, NULL);
+            30, 90, 55, 20, hwnd, NULL, NULL, NULL);
         hFrontStrike = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER,
-            80, 90, 60, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
+            90, 90, 60, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
         CreateWindowW(L"STATIC", L"Action", WS_CHILD | WS_VISIBLE,
             190, 90, 50, 20, hwnd, NULL, NULL, NULL);
         hFrontAction = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
@@ -179,8 +276,8 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
         SendMessageW(hBackOption, CB_ADDSTRING, 0, (LPARAM)L"CALL");
         SendMessageW(hBackOption, CB_ADDSTRING, 0, (LPARAM)L"PUT");
         SendMessageW(hBackOption, CB_SETCURSEL, 1, 0);
-        CreateWindowW(L"STATIC", L"Expiry Date:", WS_CHILD | WS_VISIBLE,
-            190, 150, 80, 20, hwnd, NULL, NULL, NULL);
+        CreateWindowW(L"STATIC", L"Days to EXP:", WS_CHILD | WS_VISIBLE,
+            190, 150, 90, 20, hwnd, NULL, NULL, NULL);
         hBackDTE = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER,
             270, 150, 80, 20, hwnd, (HMENU)ID_BACK_DTE, NULL, NULL);
 
@@ -242,8 +339,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             20, 390, 350, 80, hwnd, NULL, NULL, NULL);
         CreateWindowW(L"STATIC", L"Entry Price:", WS_CHILD | WS_VISIBLE,
             30, 410, 90, 20, hwnd, NULL, NULL, NULL);
-        hEntryPrice = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER,
-            120, 410, 80, 20, hwnd, (HMENU)ID_ENTRY_PRICE, NULL, NULL);
 
 
         // Buttons
@@ -265,14 +360,19 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             // Read values
             GetWindowTextW(hFrontDTE, buffer, 10);
             int frontDTE = _wtoi(buffer);
-            mesg.frontDTE = frontDTE;
+            mesg.frontDTE = frontDTE; //ADD RELATIVE DTE AMT TO MESSAGE 
 
             GetWindowTextW(hFrontStrike, buffer, 10);
             int frontStrikeRelative = _wtoi(buffer);
-            mesg.frontStrikeChangeAmt = frontStrikeRelative;
+            mesg.frontStrikeChangeAmt = frontStrikeRelative; //ADD RELATIVE AMT TO MESSAGE 
 
             GetWindowTextW(hBackDTE, buffer, 10);
             int backDTE = _wtoi(buffer);
+            mesg.backDTE = backDTE; //ADD RELATIVE DTE AMT TO MESSAGE 
+
+            GetWindowTextW(hBackStrike, buffer, 10);
+            int backStrikeRelative = _wtoi(buffer);
+            mesg.backStrikeChangeAmt = backStrikeRelative; //ADD RELATIVE AMT TO MESSAGE 
 
             GetWindowTextW(hEntryHour, buffer, 10);
             int entryHour = _wtoi(buffer);
@@ -292,8 +392,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             GetWindowTextW(hSL, buffer, 10);
             double stopLoss = _wtof(buffer);
 
-            GetWindowTextW(hEntryPrice, buffer, 10);
-            double entryPrice = _wtof(buffer);
 
             // Get selected option from Front Option Combo Box
             int frontOptionIndex = SendMessageW(GetDlgItem(hwnd, ID_FRONT_OPTION), CB_GETCURSEL, 0, 0);
@@ -301,7 +399,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             wchar_t frontOption[50];
             wcscpy_s(frontOption, buffer);
 
-            mesg.frontOption.assign(frontOption);
+            mesg.frontOption.assign(frontOption); //ADD CALL/PUT TO MESSAGE
 
             // Get selected option from Back Option Combo Box
             int backOptionIndex = SendMessageW(GetDlgItem(hwnd, ID_BACK_OPTION), CB_GETCURSEL, 0, 0);
@@ -309,17 +407,23 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             wchar_t backOption[50];
             wcscpy_s(backOption, buffer);
 
+            mesg.backOption.assign(backOption); //ADD CALL/PUT TO MESSAGE
+
             // Get selected action from Front Action Combo Box
             int frontActionIndex = SendMessageW(GetDlgItem(hwnd, ID_FRONT_ACTION), CB_GETCURSEL, 0, 0);
             SendMessageW(GetDlgItem(hwnd, ID_FRONT_ACTION), CB_GETLBTEXT, frontActionIndex, (LPARAM)buffer);
             wchar_t frontAction[50];
             wcscpy_s(frontAction, buffer);
 
+            mesg.frontAction.assign(frontAction); //ADD ACTION TO MESSAGE
+
             // Get selected action from Back Action Combo Box
             int backActionIndex = SendMessageW(GetDlgItem(hwnd, ID_BACK_ACTION), CB_GETCURSEL, 0, 0);
             SendMessageW(GetDlgItem(hwnd, ID_BACK_ACTION), CB_GETLBTEXT, backActionIndex, (LPARAM)buffer);
             wchar_t backAction[50];
             wcscpy_s(backAction, buffer);
+
+            mesg.backAction.assign(backAction);//ADD ACTION TO MESSAGE
 
             // Get Order Type
             int orderTypeIndex = SendMessageW(GetDlgItem(hwnd, ID_ORDER_TYPE), CB_GETCURSEL, 0, 0);
@@ -331,10 +435,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
             wchar_t msg[512];
             swprintf(msg, 512,
                 L"Front Option: %s\nBack Option: %s\nFront Action: %s\nBack Action: %s\nOrder Type: %s\n\n"
-                L"Front DTE: %d\nBack DTE: %d\nEntry: %02d:%02d\nExit: %02d:%02d\nTP: %.2f\nSL: %.2f\nEntry Price: %.2f",
+                L"Front DTE: %d\nBack DTE: %d\nEntry: %02d:%02d\nExit: %02d:%02d\nTP: %.2f\nSL: %.2f\n",
                 frontOption, backOption, frontAction, backAction, orderType,
-                frontDTE, backDTE, entryHour, entryMin, exitHour, exitMin, takeProfit, stopLoss, entryPrice);
+                frontDTE, backDTE, entryHour, entryMin, exitHour, exitMin, takeProfit, stopLoss);
             MessageBoxW(hwnd, msg, L"Bot Settings", MB_OK);
+
+            std::wstring date = L"20250225 20:45:00"; //TEST ENTRY DATE AND TIME HERE // Format: "YYYYMMDD HH:MM:SS"
+            mesg.activationTime.assign(date);
 
             messageQueue.push(mesg);
 
@@ -382,12 +489,8 @@ void StartGui() {
     wWinMain(hInstance, NULL, NULL, SW_SHOWDEFAULT);
 }
 
-///////////////////
+///////////////////////////
 
-/* IMPORTANT: always use your paper trading account. The code below will submit orders as part of the demonstration. */
-/* IB will not be responsible for accidental executions on your live account. */
-/* Any stock or option symbols displayed are for illustrative purposes only and are not intended to portray a recommendation. */
-/* Before contacting our API support team please refer to the available documentation. */
 int main(int argc, char** argv)
 {
 	const char* host = argc > 1 ? argv[1] : "";

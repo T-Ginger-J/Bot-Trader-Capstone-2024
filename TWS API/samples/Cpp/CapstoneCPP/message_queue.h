@@ -18,12 +18,16 @@ struct Message {
     int exitMin;
     double takeProfit;
     double stopLoss;
-    double entryPrice;
     std::wstring frontOption;
     std::wstring backOption;
     std::wstring frontAction;
     std::wstring backAction;
     std::wstring orderType;
+
+    std::wstring activationTime;  // Format: "YYYYMMDD HH:MM:SS"
+    std::wstring timeZone = L"America/New_York";  // Default timezone
+    bool processed = false;
+    time_t scheduledTime = 0;
 };
 
 class MessageQueue {
