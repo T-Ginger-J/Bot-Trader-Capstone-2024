@@ -1,4 +1,4 @@
-/* Copyright (C) 2024 Interactive Brokers LLC. All rights reserved. This code is subject to the terms
+﻿/* Copyright (C) 2024 Interactive Brokers LLC. All rights reserved. This code is subject to the terms
  * and conditions of the IB API Non-Commercial License or the IB API Commercial License, as applicable. */
 #define _CRT_SECURE_NO_WARNINGS
 #pragma warning(disable : 4996)
@@ -48,6 +48,23 @@
 #include <iomanip>  
 #include <sstream> 
 
+struct TradeRecord {
+	std::string symbol;
+	std::string entryTime;
+	double entryPrice;
+	std::string exitTime;
+	double exitPrice;
+	double shares;
+	std::string side;   // The side of the entry ("BUY" for a long entry, "SELL" for a short entry)
+};
+// Global (or class‐member) maps to hold partial data
+// Key: orderId (from Execution) to trade record. We assume one complete trade per order.
+std::map<int, TradeRecord> g_tradeMap;
+// Map to relate execId to orderId (for use when commissionReport comes in)
+std::map<std::string, int> g_execIdToOrderId;
+// Map to accumulate commission amounts for a given order
+std::map<int, double> g_orderCommission;
+
 
 const int PING_DEADLINE = 2; // seconds
 const int SLEEP_BETWEEN_PINGS = 15; // seconds
@@ -77,8 +94,9 @@ std::string userDTELeg2;
 std::string userCallOrPutLeg2;
 std::string actionLeg2;
 
-double takeProfitPercentage;
-double stopLossPercentage;
+bool usePercentage = false;
+double takeProfitValue;
+double stopLossValue;
 
 std::unordered_map<OrderId, Contract> contractMap;
 
@@ -267,6 +285,42 @@ void CapstoneCppClient::processMessages()
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////HELPER METHODS START
+void appendTradeRecordToCsv(const TradeRecord& record, double grossProfit, double commission, double netProfit)
+{
+	const std::string csvFilename = "TradeRecords.csv";
+	std::ofstream csvFile(csvFilename, std::ios::out | std::ios::app);
+	if (!csvFile.is_open()) {
+		printf("Error opening CSV file for writing.\n");
+		return;
+	}
+	// (Optional) Write header if file is empty. One way is to check file size.
+	csvFile.seekp(0, std::ios::end);
+	if (csvFile.tellp() == 0) {
+		csvFile << "Symbol,EntryTime,ExitTime,EntryPrice,ExitPrice,Shares,GrossP/L,Commission,NetP/L\n";
+	}
+	csvFile << record.symbol << ","
+		<< record.entryTime << ","
+		<< record.exitTime << ","
+		<< record.entryPrice << ","
+		<< record.exitPrice << ","
+		<< record.shares << ","
+		<< grossProfit << ","
+		<< commission << ","
+		<< netProfit << "\n";
+	csvFile.close();
+}
+
+void writeCsvHeaderIfNeeded(const std::string& filename) {
+	static bool headerWritten = false;
+	if (!headerWritten) {
+		std::ofstream csvFile(filename, std::ios::out | std::ios::app);
+		if (csvFile.tellp() == 0) {
+			csvFile << "Profit,Loss,EntryTime,ExitTime,FillPrice,Commission\n";
+		}
+		headerWritten = true;
+	}
+}
+
 time_t parseDate(const std::string& dateStr) {
 	struct tm tm = {};
 
@@ -305,7 +359,9 @@ time_t CapstoneCppClient::parseActivationTime(const Message& msg) {
 		return 0;
 	}
 
-	return _mkgmtime(&tm) - CapstoneCppClient::getTzOffset(msg.timeZone);
+	tm.tm_isdst = -1;
+
+	return _mkgmtime(&tm) - CapstoneCppClient::getTzOffset(msg.timeZone) + 3600;
 }
 
 int CapstoneCppClient::getTzOffset(const std::wstring& tz) {
@@ -394,9 +450,9 @@ void CapstoneCppClient::optionsOperations()//REQUEST INITAL SPX INFORMATION TO G
 
 	m_pClient->reqContractDetails(1, spxwContract);
 
-	std::this_thread::sleep_for(std::chrono::seconds(2));
+	std::this_thread::sleep_for(std::chrono::seconds(1));
 
-	//m_state = ST_COMBOINFO;
+	m_state = ST_OPTIONSOPERATIONS;
 }
 
 void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO ORDER
@@ -434,9 +490,10 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 	userCallOrPutLeg1 = wstringToString(msg.frontOption).c_str();
 	actionLeg1 = wstringToString(msg.frontAction).c_str();
 
-	userStrikePriceLeg2 = msg.frontStrikeChangeAmt;
+	userStrikePriceLeg2 = userStrikePriceLeg1 + msg.backStrikeChangeAmt;
+	/*userStrikePriceLeg2 = msg.backStrikeChangeAmt;
 	userStrikePriceLeg2 = spxCurrentPrice + userStrikePriceLeg2;
-	userStrikePriceLeg2 = 5 * floor(abs(userStrikePriceLeg2 / 5));
+	userStrikePriceLeg2 = 5 * floor(abs(userStrikePriceLeg2 / 5)); */
 
 	printf("Leg 2 Using Strike of: %f \n", userStrikePriceLeg2);
 
@@ -448,9 +505,19 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 
 	printf("Call or Put Value leg 2: %s\n", userCallOrPutLeg2.c_str());
 	printf("Action Leg2: %ls\n\n", msg.backAction.c_str());
+	
+	if (msg.orderType == L"%") {
+		usePercentage = true;
+	}
+	else if(msg.orderType == L"#") {
+		usePercentage = false;
+	}
 
-	takeProfitPercentage = 0.10;// HARD CODED FOR NOW NEED TO GET THIS FROM GUI
-	stopLossPercentage = 0.10;
+	takeProfitValue = msg.takeProfit;// HARD CODED FOR NOW NEED TO GET THIS FROM GUI
+	stopLossValue = msg.stopLoss;
+
+
+
 	/////////////////////////////////////////////////////////
 	Contract optionContract1;
 	optionContract1.symbol = "SPX";
@@ -475,9 +542,9 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 	optionContract2.tradingClass = "SPXW";
 
 	m_pClient->reqContractDetails(1000, optionContract1);
-	std::this_thread::sleep_for(std::chrono::seconds(2));//
+	std::this_thread::sleep_for(std::chrono::seconds(1));//
 	m_pClient->reqContractDetails(1001, optionContract2);
-	std::this_thread::sleep_for(std::chrono::seconds(2));//
+	std::this_thread::sleep_for(std::chrono::seconds(1));//
 
 
 	m_state = ST_COMBOPRICE;
@@ -485,7 +552,7 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 
 void CapstoneCppClient::getComboPrices() {
 	m_pClient->reqMktData(5, ContractSamples::SPXComboContract(legOneConId,actionLeg1 ,legTwoConId, actionLeg2), "", false, false, TagValueListSPtr());
-	std::this_thread::sleep_for(std::chrono::seconds(5));//
+	std::this_thread::sleep_for(std::chrono::seconds(2));//
 	m_pClient->cancelMktData(5);
 
 	m_state = ST_COMBOORDER;
@@ -495,12 +562,13 @@ void CapstoneCppClient::getComboPrices() {
 void CapstoneCppClient::placeComboOrder() {
 
 	printf("In Combo Order Method\n\n");
-	std::this_thread::sleep_for(std::chrono::seconds(2));//
+	std::this_thread::sleep_for(std::chrono::seconds(1));//
 
 	Contract comboContract = ContractSamples::SPXComboContract(legOneConId,actionLeg1,legTwoConId,actionLeg2);
 
-	comboLimitPrice = currentBidPrice;
-	if (currentBidPrice == 0.00) {
+	comboLimitPrice = round(((currentBidPrice + currentAskPrice) / 2) / 0.05) * 0.05;
+	printf("Using a Limit Price of: %f\n", comboLimitPrice);
+	if (currentBidPrice == 0.00 || currentAskPrice == 0) {
 		m_state = ST_COMBOPRICE;
 		return;
 	}
@@ -508,17 +576,24 @@ void CapstoneCppClient::placeComboOrder() {
 	if (1 == 1) { // MAKE TRUE FOR NOW
 
 		double takeProfitPrice;
-		takeProfitPrice = comboLimitPrice * (1 + takeProfitPercentage);
-		takeProfitPrice = round(takeProfitPrice / 0.05) * 0.05;
-
 		double stopLossPrice;
-		stopLossPrice = comboLimitPrice * (1 - stopLossPercentage);
-		stopLossPrice = round(stopLossPrice / 0.05) * 0.05;
+
+		if (usePercentage) {
+			takeProfitPrice = comboLimitPrice * (1 + (takeProfitValue/100));
+			takeProfitPrice = round(takeProfitPrice / 0.05) * 0.05;
+			stopLossPrice = comboLimitPrice * (1 - (stopLossValue/100));
+			stopLossPrice = round(stopLossPrice / 0.05) * 0.05;
+		}
+		else if (!usePercentage) {
+			takeProfitPrice = comboLimitPrice + takeProfitValue;
+			stopLossPrice = comboLimitPrice - stopLossValue;
+		}
+
 
 		printf("Take Profit Set to %f\n",takeProfitPrice);
 		printf("Stop Loss Set to %f\n",stopLossPrice);
 
-		std::this_thread::sleep_for(std::chrono::seconds(15));
+		std::this_thread::sleep_for(std::chrono::seconds(10));
 
 		Order parent;
 		Order takeProfit;
@@ -686,7 +761,7 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 	}
 
 
-	if (getIndexValue && (int)field == 4) { //==68 for Juliano account, == 4 for Prof account
+	if (getIndexValue && (int)field == 9) { //==68 for Juliano account, == 4 for Prof account
 		spxCurrentPrice = (int)price;
 		getIndexValue = false;
 		std::cout << "SPX Index Value (Current): " << spxCurrentPrice << std::endl;
@@ -724,7 +799,7 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 
 		printf("Recgonized request ID of > 2000\n");
 
-		if (comboLimitPrice < price) { //THIS IS TEST FOR SINGLE CHANGE TO 0.05 FOR CALENDER
+		if (comboLimitPrice <= price) { //THIS IS TEST FOR SINGLE CHANGE TO 0.05 FOR CALENDER
 
 			std::this_thread::sleep_for(std::chrono::seconds(5));//
 
@@ -733,12 +808,18 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 			comboLimitPrice = newLimit;
 
 			double newTakeProfitPrice;
-			newTakeProfitPrice = comboLimitPrice * (1 + takeProfitPercentage);
-			newTakeProfitPrice = round(newTakeProfitPrice / 0.05) * 0.05;
-
 			double newStopLossPrice;
-			newStopLossPrice = comboLimitPrice * (1 - stopLossPercentage);
-			newStopLossPrice = round(newStopLossPrice / 0.05) * 0.05;
+
+			if (usePercentage) {
+				newTakeProfitPrice = comboLimitPrice * (1 + (takeProfitValue/100));
+				newTakeProfitPrice = round(newTakeProfitPrice / 0.05) * 0.05;
+				newStopLossPrice = comboLimitPrice * (1 - (stopLossValue/100));
+				newStopLossPrice = round(newStopLossPrice / 0.05) * 0.05;
+			}
+			else if (!usePercentage) {
+				newTakeProfitPrice = comboLimitPrice + takeProfitValue;
+				newStopLossPrice = comboLimitPrice - stopLossValue;
+			}
 
 			Contract contractToAdjust = contractMap[currentOrderID];
 
@@ -879,7 +960,7 @@ void CapstoneCppClient::openOrderEnd() {
 
 //! [execdetails]
 void CapstoneCppClient::execDetails(int reqId, const Contract& contract, const Execution& execution) {
-	printf("Data Found: ExecDetails. ReqId: %d - %s, %s, %s - %s, %s, %s, %s, %s, %s, %s\n", reqId, contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), Utils::llongMaxString(execution.permId).c_str(), execution.execId.c_str(), Utils::longMaxString(execution.orderId).c_str(), DecimalFunctions::decimalStringToDisplay(execution.shares).c_str(), DecimalFunctions::decimalStringToDisplay(execution.cumQty).c_str(), Utils::intMaxString(execution.lastLiquidity).c_str(), (execution.pendingPriceRevision ? "yes" : "no"));
+	/*printf("Data Found: ExecDetails. ReqId: %d - %s, %s, %s - %s, %s, %s, %s, %s, %s, %s\n", reqId, contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), Utils::llongMaxString(execution.permId).c_str(), execution.execId.c_str(), Utils::longMaxString(execution.orderId).c_str(), DecimalFunctions::decimalStringToDisplay(execution.shares).c_str(), DecimalFunctions::decimalStringToDisplay(execution.cumQty).c_str(), Utils::intMaxString(execution.lastLiquidity).c_str(), (execution.pendingPriceRevision ? "yes" : "no"));
 	
 	//TEST TO OUTPUT EXEC DETAILS TO A FILE
 	std::ofstream ExecOutputFile;
@@ -888,7 +969,65 @@ void CapstoneCppClient::execDetails(int reqId, const Contract& contract, const E
 	ExecOutputFile << contract.symbol.c_str() << ",";
 	ExecOutputFile << contract.currency.c_str() << ",";
 	ExecOutputFile << Utils::longMaxString(execution.orderId).c_str() << "\n";
-	ExecOutputFile.close();
+	ExecOutputFile.close();*/
+
+	printf("ExecDetails: reqId=%d, execId=%s, orderId=%d, symbol=%s, side=%s, shares=%.2f, price=%f, time=%s\n",
+		reqId,
+		execution.execId.c_str(),
+		execution.orderId,
+		contract.symbol.c_str(),
+		execution.side.c_str(),
+		execution.shares,
+		execution.price,
+		execution.time.c_str());
+
+	// Save the mapping from execId to orderId so we can match commission reports later.
+	g_execIdToOrderId[execution.execId] = execution.orderId;
+
+	// Check if we have already seen an execution for this order.
+	auto it = g_tradeMap.find(execution.orderId);
+	if (it == g_tradeMap.end()) {
+		// No record exists: assume this execution is the entry fill.
+		TradeRecord record;
+		record.symbol = contract.symbol;
+		record.entryTime = execution.time;    // use the execution time as entry time
+		record.entryPrice = execution.price;     // use the fill price as entry price
+		record.shares = execution.shares;
+		record.side = execution.side;      // “BUY” or “SELL”
+		// Save the record keyed by orderId.
+		g_tradeMap[execution.orderId] = record;
+	}
+	else {
+		// A record exists: assume this execution is the exit fill.
+		TradeRecord& record = it->second;
+		record.exitTime = execution.time;
+		record.exitPrice = execution.price;
+		// For simplicity, assume shares are the same for both legs.
+
+		// Compute gross profit (or loss).
+		// For a long trade (entry side "BUY"), profit = (exitPrice - entryPrice)*shares.
+		// For a short trade (entry side "SELL"), profit = (entryPrice - exitPrice)*shares.
+		double grossProfit = 0.0;
+		if (record.side == "BUY") {
+			grossProfit = (record.exitPrice - record.entryPrice) * record.shares;
+		}
+		else if (record.side == "SELL") {
+			grossProfit = (record.entryPrice - record.exitPrice) * record.shares;
+		}
+
+		// Get the commission sum for this order (may have been accumulated from commissionReport callbacks).
+		double commission = g_orderCommission[execution.orderId];
+		double netProfit = grossProfit - commission;
+
+		// Append the completed trade record to the CSV.
+		appendTradeRecordToCsv(record, grossProfit, commission, netProfit);
+
+		// Remove the completed trade from the map so that a new trade for the same orderId can be started.
+		g_tradeMap.erase(it);
+		// Optionally, also remove the accumulated commission.
+		g_orderCommission.erase(execution.orderId);
+	}
+
 }
 //! [execdetails]
 
@@ -900,7 +1039,20 @@ void CapstoneCppClient::execDetailsEnd(int reqId) {
 
 //! [commissionreport]
 void CapstoneCppClient::commissionReport(const CommissionReport& commissionReport) {
-	printf("CommissionReport. %s - %s %s RPNL %s\n", commissionReport.execId.c_str(), Utils::doubleMaxString(commissionReport.commission).c_str(), commissionReport.currency.c_str(), Utils::doubleMaxString(commissionReport.realizedPNL).c_str());
+	//printf("CommissionReport. %s - %s %s RPNL %s\n", commissionReport.execId.c_str(), Utils::doubleMaxString(commissionReport.commission).c_str(), commissionReport.currency.c_str(), Utils::doubleMaxString(commissionReport.realizedPNL).c_str());
+	printf("CommissionReport: execId=%s, commission=%.2f, currency=%s, realizedPNL=%.2f\n",
+		commissionReport.execId.c_str(),
+		commissionReport.commission,
+		commissionReport.currency.c_str(),
+		commissionReport.realizedPNL);
+
+	// Look up the corresponding orderId via the execId mapping.
+	auto it = g_execIdToOrderId.find(commissionReport.execId);
+	if (it != g_execIdToOrderId.end()) {
+		int orderId = it->second;
+		// Sum commission amounts if there are multiple reports for a given order.
+		g_orderCommission[orderId] += commissionReport.commission;
+	}
 }
 //! [commissionreport]
  
@@ -1619,7 +1771,7 @@ void CapstoneCppClient::newsArticle(int requestId, int articleType, const std::s
 		#if defined(IB_WIN32)
 			TCHAR s[200];
 			GetCurrentDirectory(200, s);
-			path = s + std::string("\\MST$06f53098.pdf");
+			//path = s;// +std::string("\\MST$06f53098.pdf");
 		#elif defined(IB_POSIX)
 			char s[1024];
 			if (getcwd(s, sizeof(s)) == NULL) {

@@ -12,16 +12,13 @@ struct Message {
     int frontStrikeChangeAmt;
     int backDTE;
     int backStrikeChangeAmt;
-    int entryHour;
-    int entryMin;
-    int exitHour;
-    int exitMin;
     double takeProfit;
     double stopLoss;
     std::wstring frontOption;
     std::wstring backOption;
     std::wstring frontAction;
     std::wstring backAction;
+
     std::wstring orderType;
 
     std::wstring activationTime;  // Format: "YYYYMMDD HH:MM:SS"
