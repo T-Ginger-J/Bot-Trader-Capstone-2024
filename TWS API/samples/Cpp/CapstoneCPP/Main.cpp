@@ -226,6 +226,56 @@ void SaveSettings() {
     }
 }
 
+void SaveBotPreset() { //CAN USE THIS FUNCTION TO SAVE BOTS 
+    resetWorkingDirectory();
+
+    if (_wmkdir(L"Presets") != 0 && errno != EEXIST) {
+        MessageBoxW(NULL, L"Failed to create Presets directory.", L"Error", MB_ICONERROR);
+        return;
+    }
+
+    OPENFILENAMEW ofn;
+    wchar_t szFile[260];
+
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = NULL;
+    ofn.lpstrFile = szFile;
+    ofn.nMaxFile = sizeof(szFile);
+    ofn.lpstrFilter = L"Bot Files (*.bot)\0*.bot\0All Files\0*.*\0";
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFile[0] = '\0';
+    ofn.lpstrDefExt = L"bot";
+    ofn.lpstrInitialDir = L"Presets\\";
+
+    if (GetSaveFileNameW(&ofn) == 0) {
+        return; 
+    }
+
+    wchar_t filePath[MAX_PATH];
+    wcscpy_s(filePath, L"Presets\\");
+    PathAppendW(filePath, ofn.lpstrFile);
+
+    FILE* file = NULL;
+    errno_t err = _wfopen_s(&file, filePath, L"w");
+    if (err == 0 && file) {
+        wchar_t buffer[100];
+
+
+        ////////////
+        //SAVING BOT LOGIC HERE
+        ///////////////
+
+        fclose(file);
+        resetWorkingDirectory();
+        LoadSavedFiles();
+    }
+    else {
+        MessageBoxW(NULL, L"Failed to save Times.", L"Error", MB_ICONERROR);
+        resetWorkingDirectory();
+    }
+}
+
 void LoadSettings() {
     // Ask the user to select a preset file
     OPENFILENAMEW ofn;
@@ -312,271 +362,303 @@ void LoadSettings() {
 
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
-    case WM_CREATE: {
-        CreateWindowW(L"STATIC", L"Capstone SPX Options Bot Trader GUI (prototype)", WS_CHILD | WS_VISIBLE,
-            20, 10, 350, 20, hwnd, NULL, NULL, NULL);
+        case WM_CREATE: {
+            CreateWindowW(L"STATIC", L"Capstone SPX Options Bot Trader GUI (prototype)", WS_CHILD | WS_VISIBLE,
+                20, 10, 350, 20, hwnd, NULL, NULL, NULL);
 
-        // Front Leg Group
-        CreateWindowW(L"BUTTON", L"Front Leg", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-            20, 40, 350, 80, hwnd, NULL, NULL, NULL);
-        // Call / Putt Dropbox
-        CreateWindowW(L"STATIC", L"Option", WS_CHILD | WS_VISIBLE,
-            30, 60, 50, 20, hwnd, NULL, NULL, NULL);
-        hFrontOption = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-            80, 60, 100, 100, hwnd, (HMENU)ID_FRONT_OPTION, NULL, NULL);
-        SendMessageW(hFrontOption, CB_ADDSTRING, 0, (LPARAM)L"Call");
-        SendMessageW(hFrontOption, CB_ADDSTRING, 0, (LPARAM)L"Put");
-        SendMessageW(hFrontOption, CB_SETCURSEL, 0, 0);
-        // DTE of Back Leg
-        CreateWindowW(L"STATIC", L"Expiry Date:", WS_CHILD | WS_VISIBLE,
-            190, 60, 80, 20, hwnd, NULL, NULL, NULL);
-        hFrontDTE = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-            270, 60, 80, 20, hwnd, (HMENU)ID_FRONT_DTE, NULL, NULL);
-        // Strike Price Title and Edit Box
-        CreateWindowW(L"STATIC", L"Strike (+/-)", WS_CHILD | WS_VISIBLE,
-            30, 90, 70, 20, hwnd, NULL, NULL, NULL);
-        hFrontStrike = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-            100, 90, 60, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
-        CreateWindowW(L"STATIC", L"Action", WS_CHILD | WS_VISIBLE,
-            190, 90, 50, 20, hwnd, NULL, NULL, NULL);
-        // Indicate Buy / Sell Drop Box
-        hFrontAction = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-            240, 90, 100, 100, hwnd, (HMENU)ID_FRONT_ACTION, NULL, NULL);
-        SendMessageW(hFrontAction, CB_ADDSTRING, 0, (LPARAM)L"BUY");
-        SendMessageW(hFrontAction, CB_ADDSTRING, 0, (LPARAM)L"SELL");
-        SendMessageW(hFrontAction, CB_SETCURSEL, 0, 0);
+            // Front Leg Group
+            CreateWindowW(L"BUTTON", L"Front Leg", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                20, 40, 350, 80, hwnd, NULL, NULL, NULL);
+            // Call / Putt Dropbox
+            CreateWindowW(L"STATIC", L"Option", WS_CHILD | WS_VISIBLE,
+                30, 60, 50, 20, hwnd, NULL, NULL, NULL);
+            hFrontOption = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+                80, 60, 100, 100, hwnd, (HMENU)ID_FRONT_OPTION, NULL, NULL);
+            SendMessageW(hFrontOption, CB_ADDSTRING, 0, (LPARAM)L"Call");
+            SendMessageW(hFrontOption, CB_ADDSTRING, 0, (LPARAM)L"Put");
+            SendMessageW(hFrontOption, CB_SETCURSEL, 0, 0);
+            // DTE of Back Leg
+            CreateWindowW(L"STATIC", L"Expiry Date:", WS_CHILD | WS_VISIBLE,
+                190, 60, 80, 20, hwnd, NULL, NULL, NULL);
+            hFrontDTE = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+                270, 60, 80, 20, hwnd, (HMENU)ID_FRONT_DTE, NULL, NULL);
+            // Strike Price Title and Edit Box
+            CreateWindowW(L"STATIC", L"Strike (+/-)", WS_CHILD | WS_VISIBLE,
+                30, 90, 70, 20, hwnd, NULL, NULL, NULL);
+            hFrontStrike = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+                100, 90, 60, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
+            CreateWindowW(L"STATIC", L"Action", WS_CHILD | WS_VISIBLE,
+                190, 90, 50, 20, hwnd, NULL, NULL, NULL);
+            // Indicate Buy / Sell Drop Box
+            hFrontAction = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+                240, 90, 100, 100, hwnd, (HMENU)ID_FRONT_ACTION, NULL, NULL);
+            SendMessageW(hFrontAction, CB_ADDSTRING, 0, (LPARAM)L"BUY");
+            SendMessageW(hFrontAction, CB_ADDSTRING, 0, (LPARAM)L"SELL");
+            SendMessageW(hFrontAction, CB_SETCURSEL, 0, 0);
 
-        // Back Leg Group
-        CreateWindowW(L"BUTTON", L"Back Leg", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-            20, 130, 350, 80, hwnd, NULL, NULL, NULL);
-        // Call / Putt Dropbox
-        CreateWindowW(L"STATIC", L"Option", WS_CHILD | WS_VISIBLE,
-            30, 150, 50, 20, hwnd, NULL, NULL, NULL);
-        hBackOption = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-            80, 150, 100, 100, hwnd, (HMENU)ID_BACK_OPTION, NULL, NULL);
-        SendMessageW(hBackOption, CB_ADDSTRING, 0, (LPARAM)L"Call");
-        SendMessageW(hBackOption, CB_ADDSTRING, 0, (LPARAM)L"Put");
-        SendMessageW(hBackOption, CB_SETCURSEL, 0, 0);
-        // DTE of Back Leg
-        CreateWindowW(L"STATIC", L"Expiry Date:", WS_CHILD | WS_VISIBLE,
-            190, 150, 80, 20, hwnd, NULL, NULL, NULL);
-        hBackDTE = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-            270, 150, 80, 20, hwnd, (HMENU)ID_BACK_DTE, NULL, NULL);
-        // Strike Price Title and Edit Box
-        CreateWindowW(L"STATIC", L"Strike (+/-)", WS_CHILD | WS_VISIBLE,
-            30, 180, 70, 20, hwnd, NULL, NULL, NULL);
-        hBackStrike = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-            100, 180, 60, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
-        CreateWindowW(L"STATIC", L"Action", WS_CHILD | WS_VISIBLE,
-            190, 180, 50, 20, hwnd, NULL, NULL, NULL);
-        // Indicate Buy / Sell Drop Box
-        hBackAction = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-            240, 180, 100, 100, hwnd, (HMENU)ID_BACK_ACTION, NULL, NULL);
-        SendMessageW(hBackAction, CB_ADDSTRING, 0, (LPARAM)L"BUY");
-        SendMessageW(hBackAction, CB_ADDSTRING, 0, (LPARAM)L"SELL");
-        SendMessageW(hBackAction, CB_SETCURSEL, 0, 0);
+            // Back Leg Group
+            CreateWindowW(L"BUTTON", L"Back Leg", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                20, 130, 350, 80, hwnd, NULL, NULL, NULL);
+            // Call / Putt Dropbox
+            CreateWindowW(L"STATIC", L"Option", WS_CHILD | WS_VISIBLE,
+                30, 150, 50, 20, hwnd, NULL, NULL, NULL);
+            hBackOption = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+                80, 150, 100, 100, hwnd, (HMENU)ID_BACK_OPTION, NULL, NULL);
+            SendMessageW(hBackOption, CB_ADDSTRING, 0, (LPARAM)L"Call");
+            SendMessageW(hBackOption, CB_ADDSTRING, 0, (LPARAM)L"Put");
+            SendMessageW(hBackOption, CB_SETCURSEL, 0, 0);
+            // DTE of Back Leg
+            CreateWindowW(L"STATIC", L"Expiry Date:", WS_CHILD | WS_VISIBLE,
+                190, 150, 80, 20, hwnd, NULL, NULL, NULL);
+            hBackDTE = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+                270, 150, 80, 20, hwnd, (HMENU)ID_BACK_DTE, NULL, NULL);
+            // Strike Price Title and Edit Box
+            CreateWindowW(L"STATIC", L"Strike (+/-)", WS_CHILD | WS_VISIBLE,
+                30, 180, 70, 20, hwnd, NULL, NULL, NULL);
+            hBackStrike = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+                100, 180, 60, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
+            CreateWindowW(L"STATIC", L"Action", WS_CHILD | WS_VISIBLE,
+                190, 180, 50, 20, hwnd, NULL, NULL, NULL);
+            // Indicate Buy / Sell Drop Box
+            hBackAction = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+                240, 180, 100, 100, hwnd, (HMENU)ID_BACK_ACTION, NULL, NULL);
+            SendMessageW(hBackAction, CB_ADDSTRING, 0, (LPARAM)L"BUY");
+            SendMessageW(hBackAction, CB_ADDSTRING, 0, (LPARAM)L"SELL");
+            SendMessageW(hBackAction, CB_SETCURSEL, 0, 0);
 
-        // Positions Settings Box
-        CreateWindowW(L"BUTTON", L"Position Settings", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-            20, 210, 400, 80, hwnd, NULL, NULL, NULL);
-        // Entry Date in YYYYMMDD format
-        CreateWindowW(L"STATIC", L"Entry Date (YYYYMMDD)", WS_CHILD | WS_VISIBLE,
-            30, 230, 165, 20, hwnd, NULL, NULL, NULL);
-        hEntryDate = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER,
-            30, 250, 165, 20, hwnd, (HMENU)ID_ENTRY_DATE, NULL, NULL);
-        // Entry Time in HH:MM:SS format
-        CreateWindowW(L"STATIC", L"Entry Time (HH:MM:SS)", WS_CHILD | WS_VISIBLE,
-            220, 230, 165, 20, hwnd, NULL, NULL, NULL);
-        hEntryTime = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-            220, 250, 165, 20, hwnd, (HMENU)ID_ENTRY_TIME, NULL, NULL);
-
-
-        // TP/SL Order Box
-        CreateWindowW(L"BUTTON", L"Exit Orders", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
-            20, 300, 250, 120, hwnd, NULL, NULL, NULL);
-        // Drop box to select either percentage input or whole number input
-        CreateWindowW(L"STATIC", L"Orders Type:", WS_CHILD | WS_VISIBLE,
-            30, 320, 90, 20, hwnd, NULL, NULL, NULL);
-        hOrderType = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-            120, 320, 100, 100, hwnd, (HMENU)ID_ORDER_TYPE, NULL, NULL);
-        SendMessageW(hOrderType, CB_ADDSTRING, 0, (LPARAM)L"%");
-        SendMessageW(hOrderType, CB_ADDSTRING, 0, (LPARAM)L"#");
-        SendMessageW(hOrderType, CB_SETCURSEL, 0, 0);
-
-        // Take Profit
-        CreateWindowW(L"STATIC", L"Take Profit:", WS_CHILD | WS_VISIBLE,
-            30, 350, 90, 20, hwnd, NULL, NULL, NULL);
-        hTP = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-            120, 350, 100, 20, hwnd, (HMENU)ID_TAKE_PROFIT, NULL, NULL);
-        // Stop Loss
-        CreateWindowW(L"STATIC", L"Stop Loss:", WS_CHILD | WS_VISIBLE,
-            30, 380, 90, 20, hwnd, NULL, NULL, NULL);
-        hSL = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-            120, 380, 100, 20, hwnd, (HMENU)ID_STOP_LOSS, NULL, NULL);
-
-        // Save, Load, and Start Buttons
-        CreateWindowW(L"BUTTON", L"START", WS_CHILD | WS_VISIBLE,
-            20, 500, 100, 30, hwnd, (HMENU)ID_START_BUTTON, NULL, NULL);
-        CreateWindowW(L"BUTTON", L"Save", WS_CHILD | WS_VISIBLE,
-            140, 500, 100, 30, hwnd, (HMENU)ID_SAVE_BUTTON, NULL, NULL);
-        CreateWindowW(L"BUTTON", L"Load", WS_CHILD | WS_VISIBLE,
-            260, 500, 100, 30, hwnd, (HMENU)ID_LOAD_BUTTON, NULL, NULL);
-
-        // List of Saved Presets
-        CreateWindowW(L"STATIC", L"Saved Presets", WS_CHILD | WS_VISIBLE,
-            450, 40, 100, 20, hwnd, NULL, NULL, NULL);
-        hFileList = CreateWindowW(L"LISTBOX", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LBS_NOTIFY | LBS_STANDARD,
-            450, 60, 180, 460, hwnd, (HMENU)ID_FILE_LIST, NULL, NULL);
-
-        resetWorkingDirectory();
-        LoadSavedFiles();
-
-    }
-                  break;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == ID_START_BUTTON) {
-            wchar_t buffer[12];
-            Message mesg;
-
-            // Read values
-            GetWindowTextW(hFrontDTE, buffer, 12);
-            int frontDTE = _wtoi(buffer);
-            mesg.frontDTE = frontDTE; //ADD RELATIVE DTE AMT TO MESSAGE 
-
-            GetWindowTextW(hBackDTE, buffer, 12);
-            int backDTE = _wtoi(buffer);
-            mesg.backDTE = backDTE; //ADD RELATIVE DTE AMT TO MESSAGE 
-
-            GetWindowTextW(hFrontStrike, buffer, 12);////////
-            int frontStrikeRelative = _wtoi(buffer);
-            mesg.frontStrikeChangeAmt = frontStrikeRelative; //ADD RELATIVE AMT TO MESSAGE 
-
-            GetWindowTextW(hBackStrike, buffer, 12);/////////////
-            int backStrikeRelative = _wtoi(buffer);
-            mesg.backStrikeChangeAmt = backStrikeRelative; //ADD RELATIVE AMT TO MESSAGE 
-
-            GetWindowTextW(hEntryDate, buffer, 12);
-            std::wstring entryDate = buffer;
-
-            GetWindowTextW(hEntryTime, buffer, 12);
-            std::wstring entryTime = buffer;
-           
-            std::wstring fullTimeString = entryDate + L" " + entryTime;
-            mesg.activationTime.assign(fullTimeString);
-
-            GetWindowTextW(hTP, buffer, 10);
-            double takeProfit = _wtof(buffer);
-            mesg.takeProfit = takeProfit;
-
-            GetWindowTextW(hSL, buffer, 10);
-            double stopLoss = _wtof(buffer);
-            mesg.stopLoss = stopLoss;
+            // Positions Settings Box
+            CreateWindowW(L"BUTTON", L"Position Settings", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                20, 210, 400, 80, hwnd, NULL, NULL, NULL);
+            // Entry Date in YYYYMMDD format
+            CreateWindowW(L"STATIC", L"Entry Date (YYYYMMDD)", WS_CHILD | WS_VISIBLE,
+                30, 230, 165, 20, hwnd, NULL, NULL, NULL);
+            hEntryDate = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_NUMBER,
+                30, 250, 165, 20, hwnd, (HMENU)ID_ENTRY_DATE, NULL, NULL);
+            // Entry Time in HH:MM:SS format
+            CreateWindowW(L"STATIC", L"Entry Time (HH:MM:SS)", WS_CHILD | WS_VISIBLE,
+                220, 230, 165, 20, hwnd, NULL, NULL, NULL);
+            hEntryTime = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+                220, 250, 165, 20, hwnd, (HMENU)ID_ENTRY_TIME, NULL, NULL);
 
 
-            // Get selected option from Front Option Combo Box
-            int frontOptionIndex = SendMessageW(GetDlgItem(hwnd, ID_FRONT_OPTION), CB_GETCURSEL, 0, 0);
-            SendMessageW(GetDlgItem(hwnd, ID_FRONT_OPTION), CB_GETLBTEXT, frontOptionIndex, (LPARAM)buffer);
-            wchar_t frontOption[50];
-            wcscpy_s(frontOption, buffer);
+            // TP/SL Order Box
+            CreateWindowW(L"BUTTON", L"Exit Orders", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+                20, 300, 250, 120, hwnd, NULL, NULL, NULL);
+            // Drop box to select either percentage input or whole number input
+            CreateWindowW(L"STATIC", L"Orders Type:", WS_CHILD | WS_VISIBLE,
+                30, 320, 90, 20, hwnd, NULL, NULL, NULL);
+            hOrderType = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
+                120, 320, 100, 100, hwnd, (HMENU)ID_ORDER_TYPE, NULL, NULL);
+            SendMessageW(hOrderType, CB_ADDSTRING, 0, (LPARAM)L"%");
+            SendMessageW(hOrderType, CB_ADDSTRING, 0, (LPARAM)L"#");
+            SendMessageW(hOrderType, CB_SETCURSEL, 0, 0);
 
-            mesg.frontOption.assign(frontOption); //ADD CALL/PUT TO MESSAGE
+            // Take Profit
+            CreateWindowW(L"STATIC", L"Take Profit:", WS_CHILD | WS_VISIBLE,
+                30, 350, 90, 20, hwnd, NULL, NULL, NULL);
+            hTP = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+                120, 350, 100, 20, hwnd, (HMENU)ID_TAKE_PROFIT, NULL, NULL);
+            // Stop Loss
+            CreateWindowW(L"STATIC", L"Stop Loss:", WS_CHILD | WS_VISIBLE,
+                30, 380, 90, 20, hwnd, NULL, NULL, NULL);
+            hSL = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+                120, 380, 100, 20, hwnd, (HMENU)ID_STOP_LOSS, NULL, NULL);
 
-            // Get selected option from Back Option Combo Box
-            int backOptionIndex = SendMessageW(GetDlgItem(hwnd, ID_BACK_OPTION), CB_GETCURSEL, 0, 0);
-            SendMessageW(GetDlgItem(hwnd, ID_BACK_OPTION), CB_GETLBTEXT, backOptionIndex, (LPARAM)buffer);
-            wchar_t backOption[50];
-            wcscpy_s(backOption, buffer);
+            // Save, Load, and Start Buttons
+            CreateWindowW(L"BUTTON", L"START", WS_CHILD | WS_VISIBLE,
+                20, 500, 100, 30, hwnd, (HMENU)ID_START_BUTTON, NULL, NULL);
+            CreateWindowW(L"BUTTON", L"Save", WS_CHILD | WS_VISIBLE,
+                140, 500, 100, 30, hwnd, (HMENU)ID_SAVE_BUTTON, NULL, NULL);
+            CreateWindowW(L"BUTTON", L"Load", WS_CHILD | WS_VISIBLE,
+                260, 500, 100, 30, hwnd, (HMENU)ID_LOAD_BUTTON, NULL, NULL);
 
-            mesg.backOption.assign(backOption); //ADD CALL/PUT TO MESSAGE
+            // List of Saved Presets
+            CreateWindowW(L"STATIC", L"Saved Presets", WS_CHILD | WS_VISIBLE,
+                450, 40, 100, 20, hwnd, NULL, NULL, NULL);
+            hFileList = CreateWindowW(L"LISTBOX", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LBS_NOTIFY | LBS_STANDARD,
+                450, 60, 180, 460, hwnd, (HMENU)ID_FILE_LIST, NULL, NULL);
 
-            // Get selected action from Front Action Combo Box
-            int frontActionIndex = SendMessageW(GetDlgItem(hwnd, ID_FRONT_ACTION), CB_GETCURSEL, 0, 0);
-            SendMessageW(GetDlgItem(hwnd, ID_FRONT_ACTION), CB_GETLBTEXT, frontActionIndex, (LPARAM)buffer);
-            wchar_t frontAction[50];
-            wcscpy_s(frontAction, buffer);
+            resetWorkingDirectory();
+            LoadSavedFiles();
 
-            mesg.frontAction.assign(frontAction); //ADD ACTION TO MESSAGE
-
-            // Get selected action from Back Action Combo Box
-            int backActionIndex = SendMessageW(GetDlgItem(hwnd, ID_BACK_ACTION), CB_GETCURSEL, 0, 0);
-            SendMessageW(GetDlgItem(hwnd, ID_BACK_ACTION), CB_GETLBTEXT, backActionIndex, (LPARAM)buffer);
-            wchar_t backAction[50];
-            wcscpy_s(backAction, buffer);
-
-            mesg.backAction.assign(backAction);//ADD ACTION TO MESSAGE
-
-            // Get Order Type
-            int orderTypeIndex = SendMessageW(GetDlgItem(hwnd, ID_ORDER_TYPE), CB_GETCURSEL, 0, 0);
-            SendMessageW(GetDlgItem(hwnd, ID_ORDER_TYPE), CB_GETLBTEXT, orderTypeIndex, (LPARAM)buffer);
-            wchar_t orderType[50];
-            wcscpy_s(orderType, buffer);
-
-            mesg.orderType.assign(orderType);
-
-            // Example: Show values in a message box
-            /*wchar_t msg[512];
-            swprintf(msg, 512,
-                L"Front Option: %s\nBack Option: %s\nFront Action: %s\nBack Action: %s\nOrder Type: %s\n\n"
-                L"Front DTE: %d\nBack DTE: %d\nEntry: %02d:%02d\nExit: %02d:%02d\nTP: %.2f\nSL: %.2f",
-                frontOption, backOption, frontAction, backAction, orderType,
-                frontDTE, backDTE, entryDate, entryTime, takeProfit, stopLoss);
-            MessageBoxW(hwnd, msg, L"Bot Settings", MB_OK); */
-
-            std::wstring date = L"20250226 01:01:00"; //TEST ENTRY DATE AND TIME HERE // Format: "YYYYMMDD HH:MM:SS"
-            
-
-            messageQueue.push(mesg);
-
-        }
-        else if (LOWORD(wParam) == ID_SAVE_BUTTON) {
-            SaveSettings();
-        }
-        else if (LOWORD(wParam) == ID_LOAD_BUTTON) {
-            LoadSettings();
-        }
-        else if (LOWORD(wParam) == ID_FILE_LIST && HIWORD(wParam) == LBN_SELCHANGE) {
-            int index = SendMessageW(hFileList, LB_GETCURSEL, 0, 0);
-            if (index != LB_ERR) {
-                wchar_t fileName[MAX_PATH];
-                SendMessageW(hFileList, LB_GETTEXT, index, (LPARAM)fileName);
-                // Load the selected file
-                wchar_t filePath[MAX_PATH];
-                wcscpy_s(filePath, L"Presets\\");
-                PathAppendW(filePath, fileName);
-                // Load settings from the selected file
-                LoadSettingsFromFile(filePath);
-            }
         }
         break;
 
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        return 0;
-    }
+        case WM_COMMAND:
+            if (LOWORD(wParam) == ID_START_BUTTON) {
+                wchar_t buffer[12];
+                Message mesg;
+
+                // Read values
+                GetWindowTextW(hFrontDTE, buffer, 12);
+                int frontDTE = _wtoi(buffer);
+                mesg.frontDTE = frontDTE; //ADD RELATIVE DTE AMT TO MESSAGE 
+
+                GetWindowTextW(hBackDTE, buffer, 12);
+                int backDTE = _wtoi(buffer);
+                mesg.backDTE = backDTE; //ADD RELATIVE DTE AMT TO MESSAGE 
+
+                GetWindowTextW(hFrontStrike, buffer, 12);////////
+                int frontStrikeRelative = _wtoi(buffer);
+                mesg.frontStrikeChangeAmt = frontStrikeRelative; //ADD RELATIVE AMT TO MESSAGE 
+
+                GetWindowTextW(hBackStrike, buffer, 12);/////////////
+                int backStrikeRelative = _wtoi(buffer);
+                mesg.backStrikeChangeAmt = backStrikeRelative; //ADD RELATIVE AMT TO MESSAGE 
+
+                ///////////// TIME LOGIC WE WILL NEED
+                GetWindowTextW(hEntryDate, buffer, 12);
+                std::wstring entryDate = buffer;
+
+                GetWindowTextW(hEntryTime, buffer, 12);
+                std::wstring entryTime = buffer;
+           
+                std::wstring fullTimeString = entryDate + L" " + entryTime;
+                mesg.activationTime.assign(fullTimeString);
+                /////////////////////// 
+
+                GetWindowTextW(hTP, buffer, 10);
+                double takeProfit = _wtof(buffer);
+                mesg.takeProfit = takeProfit;
+
+                GetWindowTextW(hSL, buffer, 10);
+                double stopLoss = _wtof(buffer);
+                mesg.stopLoss = stopLoss;
+
+
+                // Get selected option from Front Option Combo Box
+                int frontOptionIndex = SendMessageW(GetDlgItem(hwnd, ID_FRONT_OPTION), CB_GETCURSEL, 0, 0);
+                SendMessageW(GetDlgItem(hwnd, ID_FRONT_OPTION), CB_GETLBTEXT, frontOptionIndex, (LPARAM)buffer);
+                wchar_t frontOption[50];
+                wcscpy_s(frontOption, buffer);
+
+                mesg.frontOption.assign(frontOption); //ADD CALL/PUT TO MESSAGE
+
+                // Get selected option from Back Option Combo Box
+                int backOptionIndex = SendMessageW(GetDlgItem(hwnd, ID_BACK_OPTION), CB_GETCURSEL, 0, 0);
+                SendMessageW(GetDlgItem(hwnd, ID_BACK_OPTION), CB_GETLBTEXT, backOptionIndex, (LPARAM)buffer);
+                wchar_t backOption[50];
+                wcscpy_s(backOption, buffer);
+
+                mesg.backOption.assign(backOption); //ADD CALL/PUT TO MESSAGE
+
+                // Get selected action from Front Action Combo Box
+                int frontActionIndex = SendMessageW(GetDlgItem(hwnd, ID_FRONT_ACTION), CB_GETCURSEL, 0, 0);
+                SendMessageW(GetDlgItem(hwnd, ID_FRONT_ACTION), CB_GETLBTEXT, frontActionIndex, (LPARAM)buffer);
+                wchar_t frontAction[50];
+                wcscpy_s(frontAction, buffer);
+
+                mesg.frontAction.assign(frontAction); //ADD ACTION TO MESSAGE
+
+                // Get selected action from Back Action Combo Box
+                int backActionIndex = SendMessageW(GetDlgItem(hwnd, ID_BACK_ACTION), CB_GETCURSEL, 0, 0);
+                SendMessageW(GetDlgItem(hwnd, ID_BACK_ACTION), CB_GETLBTEXT, backActionIndex, (LPARAM)buffer);
+                wchar_t backAction[50];
+                wcscpy_s(backAction, buffer);
+
+                mesg.backAction.assign(backAction);//ADD ACTION TO MESSAGE
+
+                // Get Order Type
+                int orderTypeIndex = SendMessageW(GetDlgItem(hwnd, ID_ORDER_TYPE), CB_GETCURSEL, 0, 0);
+                SendMessageW(GetDlgItem(hwnd, ID_ORDER_TYPE), CB_GETLBTEXT, orderTypeIndex, (LPARAM)buffer);
+                wchar_t orderType[50];
+                wcscpy_s(orderType, buffer);
+
+                mesg.orderType.assign(orderType);
+
+                // Example: Show values in a message box
+                /*wchar_t msg[512];
+                swprintf(msg, 512,
+                    L"Front Option: %s\nBack Option: %s\nFront Action: %s\nBack Action: %s\nOrder Type: %s\n\n"
+                    L"Front DTE: %d\nBack DTE: %d\nEntry: %02d:%02d\nExit: %02d:%02d\nTP: %.2f\nSL: %.2f",
+                    frontOption, backOption, frontAction, backAction, orderType,
+                    frontDTE, backDTE, entryDate, entryTime, takeProfit, stopLoss);
+                MessageBoxW(hwnd, msg, L"Bot Settings", MB_OK); */
+
+                std::wstring date = L"20250326 01:01:00"; //TEST ENTRY DATE AND TIME HERE // Format: "YYYYMMDD HH:MM:SS"
+            
+
+                messageQueue.push(mesg);
+
+            }
+            else if (LOWORD(wParam) == ID_SAVE_BUTTON) {
+                SaveSettings();
+            }
+            else if (LOWORD(wParam) == ID_LOAD_BUTTON) {
+                LoadSettings();
+            }
+            else if (LOWORD(wParam) == ID_FILE_LIST && HIWORD(wParam) == LBN_SELCHANGE) {
+                int index = SendMessageW(hFileList, LB_GETCURSEL, 0, 0);
+                if (index != LB_ERR) {
+                    wchar_t fileName[MAX_PATH];
+                    SendMessageW(hFileList, LB_GETTEXT, index, (LPARAM)fileName);
+                    // Load the selected file
+                    wchar_t filePath[MAX_PATH];
+                    wcscpy_s(filePath, L"Presets\\");
+                    PathAppendW(filePath, fileName);
+                    // Load settings from the selected file
+                    LoadSettingsFromFile(filePath);
+                }
+            }
+            break;
+
+        case WM_DESTROY:
+            PostQuitMessage(0);
+            return 0;
+        }
     return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
+LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    switch (uMsg) {
+    case WM_CREATE://BUILD BOT WINDOW GUI HERE
+
+        CreateWindowW(L"STATIC", L"Bot Window", WS_CHILD | WS_VISIBLE,
+            20, 20, 200, 30, hwnd, NULL, ((LPCREATESTRUCT)lParam)->hInstance, NULL);
+        break;
+    case WM_DESTROY:
+
+        PostQuitMessage(0);
+        break;
+    default:
+        return DefWindowProcW(hwnd, uMsg, wParam, lParam);
+    }
+    return 0;
+}
+
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow) {
+  
     WNDCLASSW wc = { 0 };
     wc.lpfnWndProc = WindowProc;
     wc.hInstance = hInstance;
     wc.lpszClassName = L"OptionsBotGUI";
-
     RegisterClassW(&wc);
+
+    WNDCLASSW wc2 = { 0 };
+    wc2.lpfnWndProc = BotWindowProc;
+    wc2.hInstance = hInstance;
+    wc2.lpszClassName = L"BotWindowClass";
+    RegisterClassW(&wc2);
 
     HWND hwnd = CreateWindowW(L"OptionsBotGUI", L"Options Trading Bot", WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, 700, 600, NULL, NULL, hInstance, NULL);
 
-    if (!hwnd) return 0;
+    if (!hwnd) return 0;   
+
+    HWND hwndSecond = CreateWindowW(L"BotWindowClass", L"Bot Window", WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, NULL, NULL, hInstance, NULL);
+    if (!hwndSecond)
+        return 0;
 
     ShowWindow(hwnd, nCmdShow);
+    ShowWindow(hwndSecond, nCmdShow);
+
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
-    return 0;
+    return (int)msg.wParam;
 }
 
 
