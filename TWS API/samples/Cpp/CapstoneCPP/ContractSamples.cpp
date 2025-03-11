@@ -61,13 +61,13 @@ Contract ContractSamples::SPXComboContract(int conIdLeg1,std::string actionLeg1,
 	contract.exchange = "CBOE";
 	contract.tradingClass = "SPXW";
 
-	ComboLegSPtr leg1(new ComboLeg); //Buy Long leg
+	ComboLegSPtr leg1(new ComboLeg); 
 	leg1->conId = conIdLeg1; //NEED TO PROGRAMTICALLY GET THIS
 	leg1->action = actionLeg1;
 	leg1->ratio = 1;
 	leg1->exchange = "CBOE";
 
-	ComboLegSPtr leg2(new ComboLeg); // Sell Short Leg
+	ComboLegSPtr leg2(new ComboLeg); 
 	leg2->conId = conIdLeg2; //NEED TO PROGRAMTICALLY GET THIS
 	leg2->action = actionLeg2;
 	leg2->ratio = 1;

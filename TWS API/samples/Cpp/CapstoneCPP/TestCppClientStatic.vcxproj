@@ -28,8 +28,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>v143</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -83,7 +83,9 @@
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(ProjectDir)\..\..\..\source\CppClient\client\lib\</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libbid.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libbid.lib;shlwapi.lib;Comctl32.lib
+;UxTheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ShowProgress>LinkVerbose</ShowProgress>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -150,6 +152,7 @@
     <ClCompile Include="AvailableAlgoParams.cpp" />
     <ClCompile Include="ContractSamples.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="message_queue.cpp" />
     <ClCompile Include="OrderSamples.cpp" />
     <ClCompile Include="ScannerSubscriptionSamples.cpp" />
     <ClCompile Include="StdAfx.cpp">
@@ -166,6 +169,7 @@
     <ClInclude Include="AvailableAlgoParams.h" />
     <ClInclude Include="ContractSamples.h" />
     <ClInclude Include="FAMethodSamples.h" />
+    <ClInclude Include="message_queue.h" />
     <ClInclude Include="OrderSamples.h" />
     <ClInclude Include="ScannerSubscriptionSamples.h" />
     <ClInclude Include="StdAfx.h" />

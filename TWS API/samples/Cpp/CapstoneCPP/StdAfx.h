@@ -4,11 +4,20 @@
 #pragma once
 #ifndef TEST_CPP_CLIENT_STDAFX_H
 #define TEST_CPP_CLIENT_STDAFX_H
+#define _CRT_SECURE_NO_WARNINGS
+
+#define UNICODE
+#define _UNICODE
 
 #include "client/StdAfx.h"
 #include <thread>
 #include <iostream>
 #include <fstream>
+
+#include <windows.h>
+#include <direct.h>
+#include <Shlwapi.h>
+#include <commdlg.h>
 
 #ifndef TWSAPIDLL
 #ifndef TWSAPIDLLEXP
