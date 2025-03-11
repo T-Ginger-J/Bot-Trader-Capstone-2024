@@ -113,6 +113,7 @@ private:
 	int getTzOffset(const std::wstring& tz);
 
 	void waitForGuiDataAndTime();
+	void exitPosition(const TradeRecord& record, long originalOrderId);
 	//////////////////////////////////////////////////
 public:
 	// events

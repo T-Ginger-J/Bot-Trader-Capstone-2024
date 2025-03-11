@@ -406,6 +406,18 @@ void CapstoneCppClient::waitForGuiDataAndTime() {
 		//////////
 		//CLOSE POSITIONS HERE
 		///////////
+		for (auto &tradePair : g_tradeMap) {
+			TradeRecord &record = tradePair.second;
+			// If the exit time is empty, then the position is still open.
+			if (record.exitTime.empty()) {
+				printf("Closing open position for orderId %s, symbol: %s\n",
+					   Utils::longMaxString(tradePair.first).c_str(), record.symbol.c_str());
+				// Place an immediate market order to exit the position.
+				exitPosition(record, tradePair.first);
+			}
+		}
+		// Optionally, clear the open positions after sending exit orders.
+		g_tradeMap.clear();
 
 		return; 
 	}*/
@@ -434,6 +446,40 @@ void CapstoneCppClient::waitForGuiDataAndTime() {
 
 	printf("No scheduled orders ready - waiting for input\n");
 	std::this_thread::sleep_for(std::chrono::seconds(1));
+}
+
+void CapstoneCppClient::exitPosition(const TradeRecord& record, long originalOrderId) {
+
+	Order exitOrder;
+	// For a BUY (long) position, you need to sell; for a SELL (short) position, buy.
+	exitOrder.action = (record.side == "BUY") ? "SELL" : "BUY";
+	exitOrder.orderType = "MKT";             
+	exitOrder.totalQuantity = record.shares;  
+
+	Contract exitContract;
+	auto it = contractMap.find(originalOrderId);
+	if (it != contractMap.end()) {
+		exitContract = it->second;
+	}
+	else {
+
+		printf("Warning: Contract details for orderId %d not found in contractMap. Using default contract parameters.\n", originalOrderId);//THIS MEAN ERROR 
+		exitContract.symbol = record.symbol;
+
+		exitContract.secType = "OPT";  
+		exitContract.exchange = "CBOE";
+		exitContract.currency = "USD";
+		exitContract.multiplier = "100";
+		exitContract.tradingClass = "SPXW";
+		// exitContract.lastTradeDateOrContractMonth = <expirationDate>;
+		// exitContract.strike = <strikePrice>;
+		// exitContract.right = <"C" or "P">;
+		return;//RETURN FOR NOW
+	}
+
+	printf("Exit order placed for orderId %d: %s %s (%f shares)\n",
+		m_orderId, exitOrder.action.c_str(), exitContract.symbol.c_str(), exitOrder.totalQuantity);
+	m_pClient->placeOrder(m_orderId++, exitContract, exitOrder);
 }
 
 
@@ -540,9 +586,9 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 	optionContract2.tradingClass = "SPXW";
 
 	m_pClient->reqContractDetails(1000, optionContract1);
-	std::this_thread::sleep_for(std::chrono::seconds(1));//
+	std::this_thread::sleep_for(std::chrono::seconds(1));//////
 	m_pClient->reqContractDetails(1001, optionContract2);
-	std::this_thread::sleep_for(std::chrono::seconds(1));//
+	std::this_thread::sleep_for(std::chrono::seconds(1));//////
 
 
 	m_state = ST_COMBOPRICE;
@@ -550,7 +596,7 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 
 void CapstoneCppClient::getComboPrices() {
 	m_pClient->reqMktData(5, ContractSamples::SPXComboContract(legOneConId,actionLeg1 ,legTwoConId, actionLeg2), "", false, false, TagValueListSPtr());
-	std::this_thread::sleep_for(std::chrono::seconds(2));//
+	std::this_thread::sleep_for(std::chrono::seconds(2));//////
 	m_pClient->cancelMktData(5);
 
 	m_state = ST_COMBOORDER;
@@ -560,7 +606,7 @@ void CapstoneCppClient::getComboPrices() {
 void CapstoneCppClient::placeComboOrder() {
 
 	printf("In Combo Order Method\n\n");
-	std::this_thread::sleep_for(std::chrono::seconds(1));//
+	std::this_thread::sleep_for(std::chrono::seconds(1));//////
 
 	Contract comboContract = ContractSamples::SPXComboContract(legOneConId,actionLeg1,legTwoConId,actionLeg2);
 
@@ -607,10 +653,10 @@ void CapstoneCppClient::placeComboOrder() {
 	}
 	else {
 		Order comboOrder;
-		comboOrder.action = "BUY";             // Buy action for the combo
-		comboOrder.orderType = "LMT";          // Limit order
+		comboOrder.action = "BUY";             
+		comboOrder.orderType = "LMT";          
 		comboOrder.totalQuantity = DecimalFunctions::stringToDecimal("1.0"); // Quantity for the combo order
-		comboOrder.lmtPrice = comboLimitPrice;           // Set a limit price 
+		comboOrder.lmtPrice = comboLimitPrice;           
 		comboOrder.transmit = true;
 
 		currentOrderID = m_orderId;
@@ -963,53 +1009,44 @@ void CapstoneCppClient::openOrderEnd() {
 
 //! [execdetails]
 void CapstoneCppClient::execDetails(int reqId, const Contract& contract, const Execution& execution) {
-	/*printf("Data Found: ExecDetails. ReqId: %d - %s, %s, %s - %s, %s, %s, %s, %s, %s, %s\n", reqId, contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), Utils::llongMaxString(execution.permId).c_str(), execution.execId.c_str(), Utils::longMaxString(execution.orderId).c_str(), DecimalFunctions::decimalStringToDisplay(execution.shares).c_str(), DecimalFunctions::decimalStringToDisplay(execution.cumQty).c_str(), Utils::intMaxString(execution.lastLiquidity).c_str(), (execution.pendingPriceRevision ? "yes" : "no"));
-	
-	//TEST TO OUTPUT EXEC DETAILS TO A FILE
-	std::ofstream ExecOutputFile;
-	ExecOutputFile.open("ExecOutputs.csv");
-	ExecOutputFile << "Symbol,Currency,OrderID \n";
-	ExecOutputFile << contract.symbol.c_str() << ",";
-	ExecOutputFile << contract.currency.c_str() << ",";
-	ExecOutputFile << Utils::longMaxString(execution.orderId).c_str() << "\n";
-	ExecOutputFile.close();*/
 
-	printf("ExecDetails: reqId=%d, execId=%s, orderId=%d, symbol=%s, side=%s, shares=%.2f, price=%f, time=%s\n",
+	std::string orderIdStr = Utils::longMaxString(execution.orderId);
+	double shares = DecimalFunctions::decimalToDouble(execution.shares);
+
+	// Print execution details
+	printf("ExecDetails: reqId=%d, execId=%s, orderId=%s, symbol=%s, side=%s, shares=%.2f, price=%.2f, time=%s\n",
 		reqId,
 		execution.execId.c_str(),
-		execution.orderId,
+		orderIdStr.c_str(),
 		contract.symbol.c_str(),
 		execution.side.c_str(),
-		execution.shares,
+		shares, 
 		execution.price,
 		execution.time.c_str());
 
-	// Save the mapping from execId to orderId so we can match commission reports later.
+	// Save mapping from execId to orderId
 	g_execIdToOrderId[execution.execId] = execution.orderId;
 
-	// Check if we have already seen an execution for this order.
+	// Check if execution is an entry or exit order
 	auto it = g_tradeMap.find(execution.orderId);
 	if (it == g_tradeMap.end()) {
-		// No record exists: assume this execution is the entry fill.
+		// Entry order
 		TradeRecord record;
 		record.symbol = contract.symbol;
-		record.entryTime = execution.time;    // use the execution time as entry time
-		record.entryPrice = execution.price;     // use the fill price as entry price
-		record.shares = execution.shares;
-		record.side = execution.side;      // “BUY” or “SELL”
-		// Save the record keyed by orderId.
+		record.entryTime = execution.time;
+		record.entryPrice = execution.price;
+		record.shares = shares; 
+		record.side = execution.side;
+		record.exitTime = ""; 
+
 		g_tradeMap[execution.orderId] = record;
 	}
 	else {
-		// A record exists: assume this execution is the exit fill.
+
 		TradeRecord& record = it->second;
 		record.exitTime = execution.time;
 		record.exitPrice = execution.price;
-		// For simplicity, assume shares are the same for both legs.
 
-		// Compute gross profit (or loss).
-		// For a long trade (entry side "BUY"), profit = (exitPrice - entryPrice)*shares.
-		// For a short trade (entry side "SELL"), profit = (entryPrice - exitPrice)*shares.
 		double grossProfit = 0.0;
 		if (record.side == "BUY") {
 			grossProfit = (record.exitPrice - record.entryPrice) * record.shares;
@@ -1018,19 +1055,14 @@ void CapstoneCppClient::execDetails(int reqId, const Contract& contract, const E
 			grossProfit = (record.entryPrice - record.exitPrice) * record.shares;
 		}
 
-		// Get the commission sum for this order (may have been accumulated from commissionReport callbacks).
 		double commission = g_orderCommission[execution.orderId];
 		double netProfit = grossProfit - commission;
 
-		// Append the completed trade record to the CSV.
 		appendTradeRecordToCsv(record, grossProfit, commission, netProfit);
 
-		// Remove the completed trade from the map so that a new trade for the same orderId can be started.
 		g_tradeMap.erase(it);
-		// Optionally, also remove the accumulated commission.
 		g_orderCommission.erase(execution.orderId);
 	}
-
 }
 //! [execdetails]
 
