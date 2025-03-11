@@ -593,7 +593,7 @@ void CapstoneCppClient::placeComboOrder() {
 		printf("Take Profit Set to %f\n",takeProfitPrice);
 		printf("Stop Loss Set to %f\n",stopLossPrice);
 
-		std::this_thread::sleep_for(std::chrono::seconds(10));
+		//std::this_thread::sleep_for(std::chrono::seconds(10));
 
 		Order parent;
 		Order takeProfit;
@@ -798,10 +798,8 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 	if (tickerId >= 2000 && (int)field == 2 && isComboCheck) { //==67 for Juliano account, == 2 for Prof account
 
 		printf("Recgonized request ID of > 2000\n");
-
+		
 		if (comboLimitPrice <= price) { //THIS IS TEST FOR SINGLE CHANGE TO 0.05 FOR CALENDER
-
-			std::this_thread::sleep_for(std::chrono::seconds(5));//
 
 			double newLimit = comboLimitPrice + 0.05;
 			printf("Adjusting Limit Price from: %f to: %f\n", comboLimitPrice, newLimit);
@@ -858,6 +856,8 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 
 			m_orderId = adjustedStopLoss.orderId + 1;
 			m_state = ST_ADJUSTORDER;
+			isComboCheck = false;
+			std::this_thread::sleep_for(std::chrono::seconds(7));//TESTING
 			return;
 		}
 
@@ -876,14 +876,19 @@ void CapstoneCppClient::orderStatus(OrderId orderId, const std::string& status, 
 	printf("\n\nOrderStatus. Id: %ld, Status: %s, Filled: %s, Remaining: %s, AvgFillPrice: %s, PermId: %s, LastFillPrice: %s, ClientId: %s, WhyHeld: %s, MktCapPrice: %s\n\n",
 		orderId, status.c_str(), DecimalFunctions::decimalStringToDisplay(filled).c_str(), DecimalFunctions::decimalStringToDisplay(remaining).c_str(), Utils::doubleMaxString(avgFillPrice).c_str(), Utils::llongMaxString(permId).c_str(),
 		Utils::doubleMaxString(lastFillPrice).c_str(), Utils::intMaxString(clientId).c_str(), whyHeld.c_str(), Utils::doubleMaxString(mktCapPrice).c_str());
+	if (status == "Filled") {
+		isComboCheck = false;
+		m_state = ST_WAITFORINPUT;
+	}
 
 	if (contractMap.find(orderId) != contractMap.end()) {
 		Contract contract = contractMap[orderId];
 
-		if (status == "Submitted" || status == "PartiallyFilled" || status == "PreSubmitted") { //PreSubmitted is for Testing this will be removed
+		if (parentId == 0 && DecimalFunctions::decimalToDouble(remaining) == 0.0 && (status == "Submitted" || status == "PartiallyFilled" || status == "PreSubmitted")) { //PreSubmitted is for Testing this will be removed
 			// Request market data to get the current bid/ask prices
 			m_pClient->reqMktData(postOrderTickID, contract, "", false, false, TagValueListSPtr());
-			std::this_thread::sleep_for(std::chrono::seconds(2));
+			isComboCheck = true;
+			//std::this_thread::sleep_for(std::chrono::seconds(1));
 			m_pClient->cancelMktData(postOrderTickID++);
 		}
 
