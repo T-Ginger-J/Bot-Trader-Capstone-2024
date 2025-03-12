@@ -60,6 +60,16 @@ enum State {
 
 };
 
+struct TradeRecord {
+	std::string symbol;
+	std::string entryTime;
+	double entryPrice;
+	std::string exitTime;
+	double exitPrice;
+	double shares;
+	std::string side;   // The side of the entry ("BUY" for a long entry, "SELL" for a short entry)
+};
+
 //! [ewrapperimpl]
 class CapstoneCppClient : public EWrapper
 {
@@ -89,12 +99,8 @@ private:
 	void ocaSamples();
 	void conditionSamples();
 	void bracketSample();
-	void reqMatchingSymbols();
-	void reqSmartComponents();
-	void reqHistogramData();
     void reqHistoricalTicks();
     void reqTickByTickData();
-	void whatIfSamples();
 
 	void reqCurrentTime();
 	

@@ -46,15 +46,7 @@
 #include <iomanip>  
 #include <sstream> 
 
-struct TradeRecord {
-	std::string symbol;
-	std::string entryTime;
-	double entryPrice;
-	std::string exitTime;
-	double exitPrice;
-	double shares;
-	std::string side;   // The side of the entry ("BUY" for a long entry, "SELL" for a short entry)
-};
+
 // Global (or class‐member) maps to hold partial data
 // Key: orderId (from Execution) to trade record. We assume one complete trade per order.
 std::map<int, TradeRecord> g_tradeMap;
@@ -347,6 +339,11 @@ time_t CapstoneCppClient::parseActivationTime(const Message& msg) {
 	std::wstring ws = msg.activationTime;
 	std::string timeStr(ws.begin(), ws.end());
 
+	/*if (!timeStr.empty() && (unsigned char)timeStr[0] == 0xEF &&
+		(unsigned char)timeStr[1] == 0xBB && (unsigned char)timeStr[2] == 0xBF) {
+		timeStr.erase(0, 3);
+	} */
+
 	// Parse "YYYYMMDD HH:MM:SS"
 	struct tm tm = {};
 	std::istringstream ss(timeStr);
@@ -359,7 +356,7 @@ time_t CapstoneCppClient::parseActivationTime(const Message& msg) {
 
 	tm.tm_isdst = -1;
 
-	return _mkgmtime(&tm) - CapstoneCppClient::getTzOffset(msg.timeZone) + 3600;
+	return _mkgmtime(&tm) - CapstoneCppClient::getTzOffset(msg.timeZone);
 }
 
 int CapstoneCppClient::getTzOffset(const std::wstring& tz) {

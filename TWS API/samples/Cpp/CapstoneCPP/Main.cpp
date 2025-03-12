@@ -1,4 +1,4 @@
-#include "SharedData.h"
+﻿#include "SharedData.h"
 
 #include "StdAfx.h"
 
@@ -389,7 +389,7 @@ void LoadSettings() {
 
 
 			// Load text from CSV
-#define LOAD_TEXT(hwnd) \
+			#define LOAD_TEXT(hwnd) \
                 if (token) { \
                     if (wcscmp(token, L"NULL") == 0) \
                         SetWindowTextW(hwnd, L""); \
@@ -408,17 +408,17 @@ void LoadSettings() {
 
 			// Handle Loading Indicies
 			int index;
-#define LOAD_INDEX(hwnd) \
+			#define LOAD_CHOICE(hwnd) \
                 if (token && swscanf_s(token, L"%d", &index) == 1) { \
                     SendMessageW(hwnd, CB_SETCURSEL, index, 0); \
                     token = wcstok_s(NULL, L",", &context); \
                 }
 
-			LOAD_INDEX(hFrontOption);
-			LOAD_INDEX(hFrontAction);
-			LOAD_INDEX(hBackOption);
-			LOAD_INDEX(hBackAction);
-			LOAD_INDEX(hOrderType);
+			LOAD_CHOICE(hFrontOption);
+			LOAD_CHOICE(hFrontAction);
+			LOAD_CHOICE(hBackOption);
+			LOAD_CHOICE(hBackAction);
+			LOAD_CHOICE(hOrderType);
 		}
 
 		fclose(file);
@@ -764,7 +764,160 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 		// Activate Button is clicked
 		else if (LOWORD(wParam) == ID_ACTIVATE_BUTTON_BOT) {
-			// TODO: Add start bot functionality
+
+			int selIndex = SendMessageW(hBotList, LB_GETCURSEL, 0, 0);
+			if (selIndex == LB_ERR) {
+				MessageBoxW(hwnd, L"No bot file selected.", L"Error", MB_ICONERROR);
+				break;
+			}
+
+			wchar_t botFileName[MAX_PATH] = { 0 };
+			SendMessageW(hBotList, LB_GETTEXT, selIndex, (LPARAM)botFileName);
+
+			wchar_t botFilePath[MAX_PATH];
+			wcscpy_s(botFilePath, L"Bots\\");
+			PathAppendW(botFilePath, botFileName);
+
+			FILE* botFile = nullptr;
+			if (_wfopen_s(&botFile, botFilePath, L"r") != 0 || !botFile) {
+				MessageBoxW(hwnd, L"Failed to open the bot file.", L"Error", MB_ICONERROR);
+				break;
+			}
+
+
+			wchar_t lineBuffer[512];
+			while (fgetws(lineBuffer, 512, botFile)) {
+				size_t len = wcslen(lineBuffer);
+				while (len > 0 && (lineBuffer[len - 1] == L'\n' || lineBuffer[len - 1] == L'\r')) {
+					lineBuffer[len - 1] = L'\0';
+					len--;
+				}
+
+				wchar_t* context = nullptr;
+				wchar_t* timeToken = wcstok_s(lineBuffer, L",", &context);
+				wchar_t* csvFileToken = wcstok_s(nullptr, L",", &context);
+
+				if (!timeToken || !csvFileToken) {
+					MessageBoxW(hwnd, L"Invalid bot file format.", L"Error", MB_ICONERROR);
+					continue;
+				}
+
+				wchar_t csvFilePath[MAX_PATH];
+				wcscpy_s(csvFilePath, L"Presets\\");
+				PathAppendW(csvFilePath, csvFileToken);
+
+				FILE* csvFile = nullptr;
+				if (_wfopen_s(&csvFile, csvFilePath, L"r") != 0 || !csvFile) {
+					wchar_t errMsg[256];
+					swprintf(errMsg, 256, L"Failed to open preset file: %s", csvFilePath);
+					MessageBoxW(hwnd, errMsg, L"Error", MB_ICONERROR);
+					continue;
+				}
+
+				wchar_t csvLine[512];
+				if (!fgetws(csvLine, 512, csvFile)) {
+					MessageBoxW(hwnd, L"Failed to read preset file.", L"Error", MB_ICONERROR);
+					fclose(csvFile);
+					continue;
+				}
+				fclose(csvFile);
+
+				wchar_t* csvContext = nullptr;
+				wchar_t* token = wcstok_s(csvLine, L",", &csvContext);
+				if (!token) continue;
+
+				Message mesg = {};
+
+				if (wcscmp(token, L"NULL") == 0)
+					mesg.frontDTE = 0;
+				else {
+					mesg.frontDTE = _wtoi(token);
+				}
+				token = wcstok_s(nullptr, L",", &csvContext);
+
+
+				if (token) {
+					mesg.frontStrikeChangeAmt = (wcscmp(token, L"NULL") == 0) ? 0 : _wtoi(token);
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+
+				if (token) {
+					mesg.backDTE = (wcscmp(token, L"NULL") == 0) ? 0 : _wtoi(token);
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				if (token) {
+					mesg.backStrikeChangeAmt = (wcscmp(token, L"NULL") == 0) ? 0 : _wtoi(token);
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				if (token) {
+					mesg.takeProfit = (wcscmp(token, L"NULL") == 0) ? 0.0 : _wtof(token);
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				if (token) {
+					mesg.stopLoss = (wcscmp(token, L"NULL") == 0) ? 0.0 : _wtof(token);
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				const wchar_t* optionMapping[] = { L"Call", L"Put" };
+				const wchar_t* actionMapping[] = { L"BUY", L"SELL" };
+				const wchar_t* orderTypeMapping[] = { L"%", L"#" };
+
+				if (token) {
+					int idx = _wtoi(token);
+					mesg.frontOption = (idx >= 0 && idx < 2) ? optionMapping[idx] : L"";
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				if (token) {
+					int idx = _wtoi(token);
+					mesg.frontAction = (idx >= 0 && idx < 2) ? actionMapping[idx] : L"";
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				if (token) {
+					int idx = _wtoi(token);
+					mesg.backOption = (idx >= 0 && idx < 2) ? optionMapping[idx] : L"";
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				if (token) {
+					int idx = _wtoi(token);
+					mesg.backAction = (idx >= 0 && idx < 2) ? actionMapping[idx] : L"";
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				if (token) {
+					int idx = _wtoi(token);
+					mesg.orderType = (idx >= 0 && idx < 2) ? orderTypeMapping[idx] : L"";
+					token = wcstok_s(nullptr, L",", &csvContext);
+				}
+
+				std::wstring righthalftime = timeToken;
+
+				if (!righthalftime.empty() && (unsigned char)righthalftime[0] == 0xEF &&
+					(unsigned char)righthalftime[1] == 0xBB && (unsigned char)righthalftime[2] == 0xBF) {
+					righthalftime.erase(0, 3);
+				}
+
+				std::time_t t = std::time(nullptr);
+				std::tm tm{};
+				localtime_s(&tm, &t);  
+
+				std::wstringstream wss;
+				wss << std::put_time(&tm, L"%Y%m%d");
+
+				std::wstring finaltime = wss.str() + L" " + righthalftime;
+
+				mesg.activationTime = finaltime;
+
+				messageQueue.push(mesg);
+			}
+
+			fclose(botFile);
 		}
 
 		break;
