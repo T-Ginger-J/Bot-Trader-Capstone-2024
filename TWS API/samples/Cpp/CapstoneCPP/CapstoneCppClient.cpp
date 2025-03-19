@@ -88,6 +88,8 @@ bool usePercentage = false;
 double takeProfitValue;
 double stopLossValue;
 
+Decimal amountOfLots;
+
 std::unordered_map<OrderId, Contract> contractMap;
 
 std::unordered_map<time_t, Message> pendingOrderMap;
@@ -339,11 +341,6 @@ time_t CapstoneCppClient::parseActivationTime(const Message& msg) {
 	std::wstring ws = msg.activationTime;
 	std::string timeStr(ws.begin(), ws.end());
 
-	/*if (!timeStr.empty() && (unsigned char)timeStr[0] == 0xEF &&
-		(unsigned char)timeStr[1] == 0xBB && (unsigned char)timeStr[2] == 0xBF) {
-		timeStr.erase(0, 3);
-	} */
-
 	// Parse "YYYYMMDD HH:MM:SS"
 	struct tm tm = {};
 	std::istringstream ss(timeStr);
@@ -557,7 +554,7 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 	takeProfitValue = msg.takeProfit;// HARD CODED FOR NOW NEED TO GET THIS FROM GUI
 	stopLossValue = msg.stopLoss;
 
-
+	amountOfLots = DecimalFunctions::doubleToDecimal(msg.lots);
 
 	/////////////////////////////////////////////////////////
 	Contract optionContract1;
@@ -642,7 +639,7 @@ void CapstoneCppClient::placeComboOrder() {
 	
 		currentOrderID = m_orderId;
 		contractMap[m_orderId] = comboContract;
-		OrderSamples::BracketOrder(m_orderId, parent, takeProfit, stopLoss, "BUY", DecimalFunctions::stringToDecimal("1.0"), comboLimitPrice, takeProfitPrice, stopLossPrice);
+		OrderSamples::BracketOrder(m_orderId, parent, takeProfit, stopLoss, "BUY", amountOfLots, comboLimitPrice, takeProfitPrice, stopLossPrice);
 		m_pClient->placeOrder(parent.orderId, comboContract, parent);
 		m_pClient->placeOrder(takeProfit.orderId, comboContract, takeProfit);
 		m_pClient->placeOrder(stopLoss.orderId, comboContract, stopLoss);
@@ -652,7 +649,7 @@ void CapstoneCppClient::placeComboOrder() {
 		Order comboOrder;
 		comboOrder.action = "BUY";             
 		comboOrder.orderType = "LMT";          
-		comboOrder.totalQuantity = DecimalFunctions::stringToDecimal("1.0"); // Quantity for the combo order
+		comboOrder.totalQuantity = amountOfLots; // Quantity for the combo order
 		comboOrder.lmtPrice = comboLimitPrice;           
 		comboOrder.transmit = true;
 
@@ -877,7 +874,7 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 				adjustedTakeProfit,
 				adjustedStopLoss,
 				"BUY",
-				DecimalFunctions::stringToDecimal("1.0"),
+				amountOfLots,
 				newLimit,
 				newTakeProfitPrice,
 				newStopLossPrice);
@@ -925,7 +922,7 @@ void CapstoneCppClient::orderStatus(OrderId orderId, const std::string& status, 
 	if (contractMap.find(orderId) != contractMap.end()) {
 		Contract contract = contractMap[orderId];
 
-		if (parentId == 0 && DecimalFunctions::decimalToDouble(remaining) == 0.0 && (status == "Submitted" || status == "PartiallyFilled" || status == "PreSubmitted")) { //PreSubmitted is for Testing this will be removed
+		if (parentId == 0 && !DecimalFunctions::decimalToDouble(remaining) == 0.0 && (status == "Submitted" || status == "PartiallyFilled" || status == "PreSubmitted")) { //PreSubmitted is for Testing this will be removed
 			// Request market data to get the current bid/ask prices
 			m_pClient->reqMktData(postOrderTickID, contract, "", false, false, TagValueListSPtr());
 			isComboCheck = true;

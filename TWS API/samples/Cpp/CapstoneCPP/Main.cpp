@@ -755,7 +755,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				GetWindowTextW(hNumberLots, numberLotsText, 256);
 
 				wchar_t combinedText[768];
-				wsprintfW(combinedText, L"%s,%s,%s", numberLotsText,entryTimeText, positionText);
+				wsprintfW(combinedText, L"%s,%s,%s",entryTimeText, positionText, numberLotsText);
 
 				SendMessageW(hBotDetails, LB_ADDSTRING, 0, (LPARAM)combinedText);
 			}
@@ -807,8 +807,9 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				wchar_t* context = nullptr;
 				wchar_t* timeToken = wcstok_s(lineBuffer, L",", &context);
 				wchar_t* csvFileToken = wcstok_s(nullptr, L",", &context);
+				wchar_t* lotNumber = wcstok_s(nullptr, L",", &context);
 
-				if (!timeToken || !csvFileToken) {
+				if (!timeToken || !csvFileToken || !lotNumber) {
 					MessageBoxW(hwnd, L"Invalid bot file format.", L"Error", MB_ICONERROR);
 					continue;
 				}
@@ -924,6 +925,10 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				std::wstring finaltime = wss.str() + L" " + righthalftime;
 
 				mesg.activationTime = finaltime;
+
+				double lotValue = wcstold(lotNumber, NULL);
+				
+				mesg.lots = lotValue;
 
 				messageQueue.push(mesg);
 			}

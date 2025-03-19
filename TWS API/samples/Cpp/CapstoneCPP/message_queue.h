@@ -14,6 +14,7 @@ struct Message {
     int backStrikeChangeAmt;
     double takeProfit;
     double stopLoss;
+    double lots;
     std::wstring frontOption;
     std::wstring backOption;
     std::wstring frontAction;
