@@ -290,7 +290,7 @@ void LoadSavedBots(HWND currentWindow) {
 	resetWorkingDirectory();
 }
 
-void SaveBot(HWND updatedWindow) {
+void SaveBot() {
 
 	resetWorkingDirectory();
 
@@ -343,7 +343,7 @@ void SaveBot(HWND updatedWindow) {
 		MessageBoxW(NULL, L"Bot saved successfully!", L"Success", MB_OK | MB_ICONINFORMATION);
 
 		resetWorkingDirectory();
-		LoadSavedPositions(updatedWindow);
+		SendMessageW(hBotDetails, LB_RESETCONTENT, 0, 0);
 	}
 	else {
 		MessageBoxW(NULL, L"Failed to save bot file.", L"Error", MB_ICONERROR);
@@ -700,7 +700,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		hPositionList = CreateWindowW(L"LISTBOX", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LBS_NOTIFY | LBS_STANDARD,
 			205, 80, 180, 100, hwnd, (HMENU)ID_POSITION_LIST, NULL, NULL);
 
-		// Save, Clear, and Add Buttons
+		// Save, Clear, Remove, and Add Buttons
 		CreateWindowW(L"BUTTON", L"Save", WS_CHILD | WS_VISIBLE,
 			30, 235, 100, 30, hwnd, (HMENU)ID_SAVE_BUTTON_BOT, NULL, NULL);
 		CreateWindowW(L"BUTTON", L"Add", WS_CHILD | WS_VISIBLE,
@@ -769,7 +769,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 		// Save Button is clicked
 		else if (LOWORD(wParam) == ID_SAVE_BUTTON_BOT) {
-			SaveBot(hBotDetails);
+			SaveBot();
 			LoadSavedBots(hBotList);
 		}
 
