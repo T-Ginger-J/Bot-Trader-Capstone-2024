@@ -39,6 +39,7 @@
 #define ID_BOT_LIST            22
 #define ID_ACTIVATE_BUTTON_BOT 23
 #define ID_REMOVE_BUTTON_BOT   24
+#define ID_NUMBER_LOTS         25
 
 
 const unsigned MAX_ATTEMPTS = 50;
@@ -52,7 +53,7 @@ HWND hFrontDTE, hFrontStrike, hBackDTE, hBackStrike, hTP, hSL;
 HWND hFrontOption, hFrontAction, hBackOption, hBackAction, hOrderType, hFileList;
 
 // Option Bot Variables
-HWND hPositionList, hBotDetails, hEntryTime, hBotList;
+HWND hPositionList, hBotDetails, hEntryTime, hBotList, hNumberLots;
 
 // Resest Working Directory to .EXE home
 void resetWorkingDirectory() {
@@ -686,8 +687,13 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		// Entry Time in HH:MM:SS format
 		CreateWindowW(L"STATIC", L"Entry Time (HH:MM:SS)", WS_CHILD | WS_VISIBLE,
 			30, 60, 165, 20, hwnd, NULL, NULL, NULL);
-		hEntryTime = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+		hEntryTime = CreateWindowW(L"EDIT", L"HH:MM:SS", WS_CHILD | WS_VISIBLE | WS_BORDER,
 			30, 80, 165, 20, hwnd, (HMENU)ID_ENTRY_TIME, NULL, NULL);
+		// Number of "Lots"
+		CreateWindowW(L"STATIC", L"Number of Lots:", WS_CHILD | WS_VISIBLE,
+			30, 120, 110, 20, hwnd, NULL, NULL, NULL);
+		hNumberLots = CreateWindowW(L"EDIT", L"1", WS_CHILD | WS_VISIBLE | WS_BORDER,
+			30, 140, 165, 20, hwnd, (HMENU)ID_NUMBER_LOTS, NULL, NULL);
 		// List of Saved Positions
 		CreateWindowW(L"STATIC", L"Saved Positions", WS_CHILD | WS_VISIBLE,
 			205, 60, 115, 20, hwnd, NULL, NULL, NULL);
@@ -741,13 +747,15 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			if (selIndex != LB_ERR) {
 				wchar_t positionText[256];
 				wchar_t entryTimeText[256];
+				wchar_t numberLotsText[256];
 
 				// Retreive text from both sources, append, and add to bot details list
 				SendMessageW(hPositionList, LB_GETTEXT, selIndex, (LPARAM)positionText);
 				GetWindowTextW(hEntryTime, entryTimeText, 256);
+				GetWindowTextW(hNumberLots, numberLotsText, 256);
 
-				wchar_t combinedText[512];
-				wsprintfW(combinedText, L"%s,%s", entryTimeText, positionText);
+				wchar_t combinedText[768];
+				wsprintfW(combinedText, L"%s,%s,%s", numberLotsText,entryTimeText, positionText);
 
 				SendMessageW(hBotDetails, LB_ADDSTRING, 0, (LPARAM)combinedText);
 			}
