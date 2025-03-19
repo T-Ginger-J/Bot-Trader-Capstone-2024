@@ -38,6 +38,8 @@
 #define ID_POSITION_LIST       21
 #define ID_BOT_LIST            22
 #define ID_ACTIVATE_BUTTON_BOT 23
+#define ID_REMOVE_BUTTON_BOT   24
+#define ID_NUMBER_LOTS         25
 
 
 const unsigned MAX_ATTEMPTS = 50;
@@ -51,7 +53,7 @@ HWND hFrontDTE, hFrontStrike, hBackDTE, hBackStrike, hTP, hSL;
 HWND hFrontOption, hFrontAction, hBackOption, hBackAction, hOrderType, hFileList;
 
 // Option Bot Variables
-HWND hPositionList, hBotDetails, hEntryTime, hBotList;
+HWND hPositionList, hBotDetails, hEntryTime, hBotList, hNumberLots;
 
 // Resest Working Directory to .EXE home
 void resetWorkingDirectory() {
@@ -348,8 +350,6 @@ void SaveBot(HWND updatedWindow) {
 	}
 }
 
-
-
 void LoadSettings() {
 	// Ask the user to select a preset file
 	OPENFILENAMEW ofn;
@@ -458,10 +458,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		hFrontDTE = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
 			270, 60, 80, 20, hwnd, (HMENU)ID_FRONT_DTE, NULL, NULL);
 		// Strike Price Title and Edit Box
-		CreateWindowW(L"STATIC", L"Strike (+/-)", WS_CHILD | WS_VISIBLE,
-			30, 90, 70, 20, hwnd, NULL, NULL, NULL);
+		CreateWindowW(L"STATIC", L"Strike Offset (+/-)", WS_CHILD | WS_VISIBLE,
+			30, 90, 120, 20, hwnd, NULL, NULL, NULL);
 		hFrontStrike = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-			100, 90, 60, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
+			140, 90, 40, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
 		CreateWindowW(L"STATIC", L"Action", WS_CHILD | WS_VISIBLE,
 			190, 90, 50, 20, hwnd, NULL, NULL, NULL);
 		// Indicate Buy / Sell Drop Box
@@ -488,15 +488,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		hBackDTE = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
 			270, 150, 80, 20, hwnd, (HMENU)ID_BACK_DTE, NULL, NULL);
 		// Strike Price Title and Edit Box
-		CreateWindowW(L"STATIC", L"Strike (+/-)", WS_CHILD | WS_VISIBLE,
-			30, 180, 70, 20, hwnd, NULL, NULL, NULL);
+		CreateWindowW(L"STATIC", L"Strike Spread (+/-)", WS_CHILD | WS_VISIBLE,
+			30, 180, 120, 20, hwnd, NULL, NULL, NULL);
 		hBackStrike = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
-			100, 180, 60, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
+			150, 180, 40, 20, hwnd, (HMENU)ID_FRONT_STRIKE, NULL, NULL);
 		CreateWindowW(L"STATIC", L"Action", WS_CHILD | WS_VISIBLE,
-			190, 180, 50, 20, hwnd, NULL, NULL, NULL);
+			200, 180, 50, 20, hwnd, NULL, NULL, NULL);
 		// Indicate Buy / Sell Drop Box
 		hBackAction = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-			240, 180, 100, 100, hwnd, (HMENU)ID_BACK_ACTION, NULL, NULL);
+			250, 180, 100, 100, hwnd, (HMENU)ID_BACK_ACTION, NULL, NULL);
 		SendMessageW(hBackAction, CB_ADDSTRING, 0, (LPARAM)L"BUY");
 		SendMessageW(hBackAction, CB_ADDSTRING, 0, (LPARAM)L"SELL");
 		SendMessageW(hBackAction, CB_SETCURSEL, 0, 0);
@@ -508,9 +508,9 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		CreateWindowW(L"STATIC", L"Orders Type:", WS_CHILD | WS_VISIBLE,
 			30, 240, 90, 20, hwnd, NULL, NULL, NULL);
 		hOrderType = CreateWindowW(L"COMBOBOX", NULL, WS_CHILD | WS_VISIBLE | CBS_DROPDOWNLIST,
-			120, 240, 100, 100, hwnd, (HMENU)ID_ORDER_TYPE, NULL, NULL);
-		SendMessageW(hOrderType, CB_ADDSTRING, 0, (LPARAM)L"%");
-		SendMessageW(hOrderType, CB_ADDSTRING, 0, (LPARAM)L"#");
+			120, 240, 125, 100, hwnd, (HMENU)ID_ORDER_TYPE, NULL, NULL);
+		SendMessageW(hOrderType, CB_ADDSTRING, 0, (LPARAM)L"Percentage");
+		SendMessageW(hOrderType, CB_ADDSTRING, 0, (LPARAM)L"Whole Number");
 		SendMessageW(hOrderType, CB_SETCURSEL, 0, 0);
 		// Take Profit
 		CreateWindowW(L"STATIC", L"Take Profit:", WS_CHILD | WS_VISIBLE,
@@ -687,8 +687,13 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		// Entry Time in HH:MM:SS format
 		CreateWindowW(L"STATIC", L"Entry Time (HH:MM:SS)", WS_CHILD | WS_VISIBLE,
 			30, 60, 165, 20, hwnd, NULL, NULL, NULL);
-		hEntryTime = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
+		hEntryTime = CreateWindowW(L"EDIT", L"HH:MM:SS", WS_CHILD | WS_VISIBLE | WS_BORDER,
 			30, 80, 165, 20, hwnd, (HMENU)ID_ENTRY_TIME, NULL, NULL);
+		// Number of "Lots"
+		CreateWindowW(L"STATIC", L"Number of Lots:", WS_CHILD | WS_VISIBLE,
+			30, 120, 110, 20, hwnd, NULL, NULL, NULL);
+		hNumberLots = CreateWindowW(L"EDIT", L"1", WS_CHILD | WS_VISIBLE | WS_BORDER,
+			30, 140, 165, 20, hwnd, (HMENU)ID_NUMBER_LOTS, NULL, NULL);
 		// List of Saved Positions
 		CreateWindowW(L"STATIC", L"Saved Positions", WS_CHILD | WS_VISIBLE,
 			205, 60, 115, 20, hwnd, NULL, NULL, NULL);
@@ -702,13 +707,15 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			150, 235, 100, 30, hwnd, (HMENU)ID_ADD_BUTTON_BOT, NULL, NULL);
 		CreateWindowW(L"BUTTON", L"Clear", WS_CHILD | WS_VISIBLE,
 			270, 235, 100, 30, hwnd, (HMENU)ID_CLEAR_BUTTON_BOT, NULL, NULL);
+		CreateWindowW(L"BUTTON", L"Remove Selection", WS_CHILD | WS_VISIBLE,
+			255, 195, 130, 30, hwnd, (HMENU)ID_REMOVE_BUTTON_BOT, NULL, NULL);
 
 		// Current Bot Group
 		CreateWindowW(L"BUTTON", L"Current Bot (Time, Position)", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
 			405, 40, 250, 240, hwnd, NULL, NULL, NULL);
 		// List of Current Bot Details
-		CreateWindowW(L"STATIC", L"Saved Positions", WS_CHILD | WS_VISIBLE,
-			415, 60, 115, 20, hwnd, NULL, NULL, NULL);
+		CreateWindowW(L"STATIC", L"Selected Positions", WS_CHILD | WS_VISIBLE,
+			415, 60, 140, 20, hwnd, NULL, NULL, NULL);
 		hBotDetails = CreateWindowW(L"LISTBOX", NULL, WS_CHILD | WS_VISIBLE | WS_BORDER | LBS_NOTIFY | LBS_STANDARD,
 			415, 80, 230, 200, hwnd, (HMENU)ID_BOT_DETAILS_LIST, NULL, NULL);
 
@@ -724,6 +731,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		// Activate Button
 		CreateWindowW(L"BUTTON", L"Activate Bot", WS_CHILD | WS_VISIBLE,
 			90, 450, 100, 30, hwnd, (HMENU)ID_ACTIVATE_BUTTON_BOT, NULL, NULL);
+		
 
 		resetWorkingDirectory();
 		LoadSavedPositions(hPositionList);
@@ -739,17 +747,20 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			if (selIndex != LB_ERR) {
 				wchar_t positionText[256];
 				wchar_t entryTimeText[256];
+				wchar_t numberLotsText[256];
 
 				// Retreive text from both sources, append, and add to bot details list
 				SendMessageW(hPositionList, LB_GETTEXT, selIndex, (LPARAM)positionText);
 				GetWindowTextW(hEntryTime, entryTimeText, 256);
+				GetWindowTextW(hNumberLots, numberLotsText, 256);
 
-				wchar_t combinedText[512];
-				wsprintfW(combinedText, L"%s,%s", entryTimeText, positionText);
+				wchar_t combinedText[768];
+				wsprintfW(combinedText, L"%s,%s,%s", numberLotsText,entryTimeText, positionText);
 
 				SendMessageW(hBotDetails, LB_ADDSTRING, 0, (LPARAM)combinedText);
 			}
 		}
+
 		// Clear Button is clicked
 		else if (LOWORD(wParam) == ID_CLEAR_BUTTON_BOT) {
 			// Clear the list box first
@@ -918,6 +929,15 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			}
 
 			fclose(botFile);
+		}
+
+		// Remove Selection Button is clicked
+		else if (LOWORD(wParam) == ID_REMOVE_BUTTON_BOT) {
+			// Get the selected index from the bot details list
+			int selIndex = SendMessageW(hBotDetails, LB_GETCURSEL, 0, 0);
+			if (selIndex != LB_ERR) { // Ensure something is selected
+				SendMessageW(hBotDetails, LB_DELETESTRING, selIndex, 0); // Remove selected item
+			}
 		}
 
 		break;
