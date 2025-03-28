@@ -77,13 +77,13 @@ void LoadSettingsFromFile(const wchar_t* filePath) {
 
 			// Load Text Values Into the GUI Elements
 #define LOAD_TEXT(hwnd) \
-                if (token) { \
-                    if (wcscmp(token, L"NULL") == 0) \
-                        SetWindowTextW(hwnd, L""); \
-                    else \
-                        SetWindowTextW(hwnd, token); \
-                    token = wcstok_s(NULL, L",", &context); \
-                }
+				if (token) { \
+					if (wcscmp(token, L"NULL") == 0) \
+						SetWindowTextW(hwnd, L""); \
+					else \
+						SetWindowTextW(hwnd, token); \
+					token = wcstok_s(NULL, L",", &context); \
+				}
 
 			LOAD_TEXT(hFrontDTE);
 			LOAD_TEXT(hFrontStrike);
@@ -94,11 +94,11 @@ void LoadSettingsFromFile(const wchar_t* filePath) {
 
 			// Load Combo Box Selections
 #define LOAD_INDEX(hwnd) \
-                if (token) { \
-                    int index = _wtoi(token); \
-                    SendMessageW(hwnd, CB_SETCURSEL, index, 0); \
-                    token = wcstok_s(NULL, L",", &context); \
-                }
+				if (token) { \
+					int index = _wtoi(token); \
+					SendMessageW(hwnd, CB_SETCURSEL, index, 0); \
+					token = wcstok_s(NULL, L",", &context); \
+				}
 
 			LOAD_INDEX(hFrontOption);
 			LOAD_INDEX(hFrontAction);
@@ -205,9 +205,9 @@ void SavePosition() {
 
 		// Save the text from the text boxes
 #define SAVE_TEXT(hwnd) \
-            memset(buffer, 0, sizeof(buffer)); \
-            GetWindowTextW(hwnd, buffer, 10); \
-            fwprintf(file, L"%s,", buffer[0] ? buffer : L"NULL");
+			memset(buffer, 0, sizeof(buffer)); \
+			GetWindowTextW(hwnd, buffer, 10); \
+			fwprintf(file, L"%s,", buffer[0] ? buffer : L"NULL");
 
 		SAVE_TEXT(hFrontDTE);
 		SAVE_TEXT(hFrontStrike);
@@ -219,8 +219,8 @@ void SavePosition() {
 		// Save the index from the drop boxes
 		int index;
 #define SAVE_INDEX(hwnd) \
-            index = SendMessageW(hwnd, CB_GETCURSEL, 0, 0); \
-            fwprintf(file, L"%d,", (index != CB_ERR) ? index : -1);
+			index = SendMessageW(hwnd, CB_GETCURSEL, 0, 0); \
+			fwprintf(file, L"%d,", (index != CB_ERR) ? index : -1);
 
 
 		SAVE_INDEX(hFrontOption);
@@ -390,13 +390,13 @@ void LoadSettings() {
 
 			// Load text from CSV
 			#define LOAD_TEXT(hwnd) \
-                if (token) { \
-                    if (wcscmp(token, L"NULL") == 0) \
-                        SetWindowTextW(hwnd, L""); \
-                    else \
-                        SetWindowTextW(hwnd, token); \
-                    token = wcstok_s(NULL, L",", &context); \
-                }
+				if (token) { \
+					if (wcscmp(token, L"NULL") == 0) \
+						SetWindowTextW(hwnd, L""); \
+					else \
+						SetWindowTextW(hwnd, token); \
+					token = wcstok_s(NULL, L",", &context); \
+				}
 
 			LOAD_TEXT(hFrontDTE);
 			LOAD_TEXT(hFrontStrike);
@@ -409,10 +409,10 @@ void LoadSettings() {
 			// Handle Loading Indicies
 			int index;
 			#define LOAD_CHOICE(hwnd) \
-                if (token && swscanf_s(token, L"%d", &index) == 1) { \
-                    SendMessageW(hwnd, CB_SETCURSEL, index, 0); \
-                    token = wcstok_s(NULL, L",", &context); \
-                }
+				if (token && swscanf_s(token, L"%d", &index) == 1) { \
+					SendMessageW(hwnd, CB_SETCURSEL, index, 0); \
+					token = wcstok_s(NULL, L",", &context); \
+				}
 
 			LOAD_CHOICE(hFrontOption);
 			LOAD_CHOICE(hFrontAction);

@@ -32,10 +32,10 @@ enum State {
 	ST_CANCELORDER_ACK,
 	ST_PING,
 	ST_PING_ACK,
-    ST_REQHISTORICALTICKS,
-    ST_REQHISTORICALTICKS_ACK,
-    ST_REQTICKBYTICKDATA,
-    ST_REQTICKBYTICKDATA_ACK,
+	ST_REQHISTORICALTICKS,
+	ST_REQHISTORICALTICKS_ACK,
+	ST_REQTICKBYTICKDATA,
+	ST_REQTICKBYTICKDATA_ACK,
 	ST_IDLE,
 
 	ST_ORDEROPERATIONS,
@@ -99,8 +99,8 @@ private:
 	void ocaSamples();
 	void conditionSamples();
 	void bracketSample();
-    void reqHistoricalTicks();
-    void reqTickByTickData();
+	void reqHistoricalTicks();
+	void reqTickByTickData();
 
 	void reqCurrentTime();
 	
@@ -143,7 +143,7 @@ private:
 
 	OrderId m_orderId;
 	std::unique_ptr<EReader> m_pReader;
-    bool m_extraAuth;
+	bool m_extraAuth;
 	std::string m_bboExchange;
 	
 };
