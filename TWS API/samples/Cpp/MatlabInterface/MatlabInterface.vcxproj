@@ -104,7 +104,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>..\CapstoneCPP</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\source\CppClient\client;..\CapstoneCPP</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -131,6 +131,9 @@
     <ClCompile Include="MatlabInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\source\cppclient\client\TwsSocketClientStatic.vcxproj">
+      <Project>{256e5e0b-3fd4-49e3-b7f2-2995ac60721d}</Project>
+    </ProjectReference>
     <ProjectReference Include="..\CapstoneCPP\TestCppClientStatic.vcxproj">
       <Project>{a2a869ef-063b-4df7-ac04-74fa6be0a764}</Project>
     </ProjectReference>
