@@ -104,12 +104,12 @@ double currentOrderID;
 // member funcs
 //! [socket_init]
 CapstoneCppClient::CapstoneCppClient() :
-      m_osSignal(2000)//2-seconds timeout
-    , m_pClient(new EClientSocket(this, &m_osSignal))
+	  m_osSignal(2000)//2-seconds timeout
+	, m_pClient(new EClientSocket(this, &m_osSignal))
 	, m_state(ST_CONNECT)
 	, m_sleepDeadline(0)
 	, m_orderId(0)
-    , m_extraAuth(false)
+	, m_extraAuth(false)
 {
 }
 //! [socket_init]
@@ -164,7 +164,7 @@ void CapstoneCppClient::setConnectOptions(const std::string& connectOptions)
 
 void CapstoneCppClient::setOptionalCapabilities(const std::string& optionalCapabilities)
 {
-    m_pClient->setOptionalCapabilities(optionalCapabilities);
+	m_pClient->setOptionalCapabilities(optionalCapabilities);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -202,11 +202,11 @@ void CapstoneCppClient::processMessages()
 			break;
 		case ST_BRACKETSAMPLES_ACK:
 			break;
-        case ST_REQHISTORICALTICKS:
-            reqHistoricalTicks();
-            break;
-        case ST_REQHISTORICALTICKS_ACK:
-            break;
+		case ST_REQHISTORICALTICKS:
+			reqHistoricalTicks();
+			break;
+		case ST_REQHISTORICALTICKS_ACK:
+			break;
 		case ST_REQTICKBYTICKDATA:
 			reqTickByTickData();
 			break;
@@ -685,7 +685,7 @@ void CapstoneCppClient::nextValidId(OrderId orderId)
 //! [connectack]
 void CapstoneCppClient::connectAck() {
 	if (!m_extraAuth && m_pClient->asyncEConnect())
-        m_pClient->startApi();
+		m_pClient->startApi();
 }
 //! [connectack]
 
@@ -705,17 +705,17 @@ void CapstoneCppClient::currentTime( long time)
 {
 	if ( m_state == ST_PING_ACK) {
 		time_t t = ( time_t)time;
-        struct tm timeinfo;
-        char currentTime[80];
+		struct tm timeinfo;
+		char currentTime[80];
 
 #if defined(IB_WIN32)
-        localtime_s(&timeinfo, &t);
-        asctime_s(currentTime, sizeof currentTime, &timeinfo);
+		localtime_s(&timeinfo, &t);
+		asctime_s(currentTime, sizeof currentTime, &timeinfo);
 #else
-        localtime_r(&t, &timeinfo);
-        asctime_r(&timeinfo, currentTime);
+		localtime_r(&t, &timeinfo);
+		asctime_r(&timeinfo, currentTime);
 #endif
-        printf( "The current date/time is: %s", currentTime);
+		printf( "The current date/time is: %s", currentTime);
 
 		time_t now = ::time(NULL);
 		m_sleepDeadline = now + SLEEP_BETWEEN_PINGS;
@@ -1349,10 +1349,10 @@ void CapstoneCppClient::reqTickByTickData()
 // ////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 void CapstoneCppClient::tickEFP(TickerId tickerId, TickType tickType, double basisPoints, const std::string& formattedBasisPoints,
-                            double totalDividends, int holdDays, const std::string& futureLastTradeDate, double dividendImpact, double dividendsToLastTradeDate) {
-    printf( "TickEFP. %ld, Type: %d, BasisPoints: %s, FormattedBasisPoints: %s, Total Dividends: %s, HoldDays: %s, Future Last Trade Date: %s, Dividend Impact: %s, Dividends To Last Trade Date: %s\n", 
-        tickerId, (int)tickType, Utils::doubleMaxString(basisPoints).c_str(), formattedBasisPoints.c_str(), Utils::doubleMaxString(totalDividends).c_str(), Utils::intMaxString(holdDays).c_str(), 
-        futureLastTradeDate.c_str(), Utils::doubleMaxString(dividendImpact).c_str(), Utils::doubleMaxString(dividendsToLastTradeDate).c_str());
+							double totalDividends, int holdDays, const std::string& futureLastTradeDate, double dividendImpact, double dividendsToLastTradeDate) {
+	printf( "TickEFP. %ld, Type: %d, BasisPoints: %s, FormattedBasisPoints: %s, Total Dividends: %s, HoldDays: %s, Future Last Trade Date: %s, Dividend Impact: %s, Dividends To Last Trade Date: %s\n", 
+		tickerId, (int)tickType, Utils::doubleMaxString(basisPoints).c_str(), formattedBasisPoints.c_str(), Utils::doubleMaxString(totalDividends).c_str(), Utils::intMaxString(holdDays).c_str(), 
+		futureLastTradeDate.c_str(), Utils::doubleMaxString(dividendImpact).c_str(), Utils::doubleMaxString(dividendsToLastTradeDate).c_str());
 }
 
 void CapstoneCppClient::winError( const std::string& str, int lastError) {}
@@ -1363,19 +1363,19 @@ void CapstoneCppClient::connectionClosed() {
 
 //! [updateaccountvalue]
 void CapstoneCppClient::updateAccountValue(const std::string& key, const std::string& val,
-                                       const std::string& currency, const std::string& accountName) {
+									   const std::string& currency, const std::string& accountName) {
 	printf("UpdateAccountValue. Key: %s, Value: %s, Currency: %s, Account Name: %s\n", key.c_str(), val.c_str(), currency.c_str(), accountName.c_str());
 }
 //! [updateaccountvalue]
 
 //! [updateportfolio]
 void CapstoneCppClient::updatePortfolio(const Contract& contract, Decimal position,
-                                    double marketPrice, double marketValue, double averageCost,
-                                    double unrealizedPNL, double realizedPNL, const std::string& accountName){
-    printf("UpdatePortfolio. %s, %s @ %s: Position: %s, MarketPrice: %s, MarketValue: %s, AverageCost: %s, UnrealizedPNL: %s, RealizedPNL: %s, AccountName: %s\n", 
-        (contract.symbol).c_str(), (contract.secType).c_str(), (contract.primaryExchange).c_str(), DecimalFunctions::decimalStringToDisplay(position).c_str(),
-        Utils::doubleMaxString(marketPrice).c_str(), Utils::doubleMaxString(marketValue).c_str(), Utils::doubleMaxString(averageCost).c_str(), 
-        Utils::doubleMaxString(unrealizedPNL).c_str(), Utils::doubleMaxString(realizedPNL).c_str(), accountName.c_str());
+									double marketPrice, double marketValue, double averageCost,
+									double unrealizedPNL, double realizedPNL, const std::string& accountName){
+	printf("UpdatePortfolio. %s, %s @ %s: Position: %s, MarketPrice: %s, MarketValue: %s, AverageCost: %s, UnrealizedPNL: %s, RealizedPNL: %s, AccountName: %s\n", 
+		(contract.symbol).c_str(), (contract.secType).c_str(), (contract.primaryExchange).c_str(), DecimalFunctions::decimalStringToDisplay(position).c_str(),
+		Utils::doubleMaxString(marketPrice).c_str(), Utils::doubleMaxString(marketValue).c_str(), Utils::doubleMaxString(averageCost).c_str(), 
+		Utils::doubleMaxString(unrealizedPNL).c_str(), Utils::doubleMaxString(realizedPNL).c_str(), accountName.c_str());
 }
 //! [updateportfolio]
 
@@ -1536,17 +1536,17 @@ void CapstoneCppClient::printBondContractDetailsMsg(const ContractDetails& contr
 
 //! [updatemktdepth]
 void CapstoneCppClient::updateMktDepth(TickerId id, int position, int operation, int side,
-                                   double price, Decimal size) {
-    printf( "UpdateMarketDepth. %ld - Position: %s, Operation: %d, Side: %d, Price: %s, Size: %s\n", id, Utils::intMaxString(position).c_str(), operation, side, 
-        Utils::doubleMaxString(price).c_str(), DecimalFunctions::decimalStringToDisplay(size).c_str());
+								   double price, Decimal size) {
+	printf( "UpdateMarketDepth. %ld - Position: %s, Operation: %d, Side: %d, Price: %s, Size: %s\n", id, Utils::intMaxString(position).c_str(), operation, side, 
+		Utils::doubleMaxString(price).c_str(), DecimalFunctions::decimalStringToDisplay(size).c_str());
 }
 //! [updatemktdepth]
 
 //! [updatemktdepthl2]
 void CapstoneCppClient::updateMktDepthL2(TickerId id, int position, const std::string& marketMaker, int operation,
-                                     int side, double price, Decimal size, bool isSmartDepth) {
-    printf( "UpdateMarketDepthL2. %ld - Position: %s, Operation: %d, Side: %d, Price: %s, Size: %s, isSmartDepth: %d\n", id, Utils::intMaxString(position).c_str(), operation, side, 
-        Utils::doubleMaxString(price).c_str(), DecimalFunctions::decimalStringToDisplay(size).c_str(), isSmartDepth);
+									 int side, double price, Decimal size, bool isSmartDepth) {
+	printf( "UpdateMarketDepthL2. %ld - Position: %s, Operation: %d, Side: %d, Price: %s, Size: %s, isSmartDepth: %d\n", id, Utils::intMaxString(position).c_str(), operation, side, 
+		Utils::doubleMaxString(price).c_str(), DecimalFunctions::decimalStringToDisplay(size).c_str(), isSmartDepth);
 }
 //! [updatemktdepthl2]
 
@@ -1570,8 +1570,8 @@ void CapstoneCppClient::receiveFA(faDataType pFaDataType, const std::string& cxm
 
 //! [historicaldata]
 void CapstoneCppClient::historicalData(TickerId reqId, const Bar& bar) {
-    printf( "HistoricalData. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, bar.time.c_str(), 
-        Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(), Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), 
+	printf( "HistoricalData. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, bar.time.c_str(), 
+		Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(), Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), 
 		DecimalFunctions::decimalStringToDisplay(bar.volume).c_str(), Utils::intMaxString(bar.count).c_str(), DecimalFunctions::decimalStringToDisplay(bar.wap).c_str());
 }
 //! [historicaldata]
@@ -1590,8 +1590,8 @@ void CapstoneCppClient::scannerParameters(const std::string& xml) {
 
 //! [scannerdata]
 void CapstoneCppClient::scannerData(int reqId, int rank, const ContractDetails& contractDetails,
-                                const std::string& distance, const std::string& benchmark, const std::string& projection,
-                                const std::string& legsStr) {
+								const std::string& distance, const std::string& benchmark, const std::string& projection,
+								const std::string& legsStr) {
 	printf( "ScannerData. %d - Rank: %d, Symbol: %s, SecType: %s, Currency: %s, Distance: %s, Benchmark: %s, Projection: %s, Legs String: %s\n", reqId, rank, contractDetails.contract.symbol.c_str(), contractDetails.contract.secType.c_str(), contractDetails.contract.currency.c_str(), distance.c_str(), benchmark.c_str(), projection.c_str(), legsStr.c_str());
 }
 //! [scannerdata]
@@ -1604,9 +1604,9 @@ void CapstoneCppClient::scannerDataEnd(int reqId) {
 
 //! [realtimebar]
 void CapstoneCppClient::realtimeBar(TickerId reqId, long time, double open, double high, double low, double close,
-                                Decimal volume, Decimal wap, int count) {
-    printf( "RealTimeBars. %ld - Time: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, Utils::longMaxString(time).c_str(), 
-        Utils::doubleMaxString(open).c_str(), Utils::doubleMaxString(high).c_str(), Utils::doubleMaxString(low).c_str(), Utils::doubleMaxString(close).c_str(), 
+								Decimal volume, Decimal wap, int count) {
+	printf( "RealTimeBars. %ld - Time: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, Utils::longMaxString(time).c_str(), 
+		Utils::doubleMaxString(open).c_str(), Utils::doubleMaxString(high).c_str(), Utils::doubleMaxString(low).c_str(), Utils::doubleMaxString(close).c_str(), 
 		DecimalFunctions::decimalStringToDisplay(volume).c_str(), Utils::intMaxString(count).c_str(), DecimalFunctions::decimalStringToDisplay(wap).c_str());
 }
 //! [realtimebar]
@@ -1618,7 +1618,7 @@ void CapstoneCppClient::fundamentalData(TickerId reqId, const std::string& data)
 //! [fundamentaldata]
 
 void CapstoneCppClient::deltaNeutralValidation(int reqId, const DeltaNeutralContract& deltaNeutralContract) {
-    printf( "DeltaNeutralValidation. %d, ConId: %ld, Delta: %s, Price: %s\n", reqId, deltaNeutralContract.conId, Utils::doubleMaxString(deltaNeutralContract.delta).c_str(), Utils::doubleMaxString(deltaNeutralContract.price).c_str());
+	printf( "DeltaNeutralValidation. %d, ConId: %ld, Delta: %s, Price: %s\n", reqId, deltaNeutralContract.conId, Utils::doubleMaxString(deltaNeutralContract.delta).c_str(), Utils::doubleMaxString(deltaNeutralContract.price).c_str());
 }
 
 //! [ticksnapshotend]
@@ -1629,7 +1629,7 @@ void CapstoneCppClient::tickSnapshotEnd(int reqId) {
 
 //! [position]
 void CapstoneCppClient::position( const std::string& account, const Contract& contract, Decimal position, double avgCost) {
-    printf( "Position. %s - Symbol: %s, SecType: %s, Currency: %s, Position: %s, Avg Cost: %s\n", account.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), DecimalFunctions::decimalStringToDisplay(position).c_str(), Utils::doubleMaxString(avgCost).c_str());
+	printf( "Position. %s - Symbol: %s, SecType: %s, Currency: %s, Position: %s, Avg Cost: %s\n", account.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), DecimalFunctions::decimalStringToDisplay(position).c_str(), Utils::doubleMaxString(avgCost).c_str());
 }
 //! [position]
 
@@ -1665,8 +1665,8 @@ void CapstoneCppClient::verifyAndAuthMessageAPI( const std::string& apiDatai, co
 
 void CapstoneCppClient::verifyAndAuthCompleted( bool isSuccessful, const std::string& errorText) {
 	printf("verifyAndAuthCompleted. IsSuccessful: %d - Error: %s\n", isSuccessful, errorText.c_str());
-    if (isSuccessful)
-        m_pClient->startApi();
+	if (isSuccessful)
+		m_pClient->startApi();
 }
 
 //! [displaygrouplist]
@@ -1683,7 +1683,7 @@ void CapstoneCppClient::displayGroupUpdated( int reqId, const std::string& contr
 
 //! [positionmulti]
 void CapstoneCppClient::positionMulti( int reqId, const std::string& account,const std::string& modelCode, const Contract& contract, Decimal pos, double avgCost) {
-    printf("Position Multi. Request: %d, Account: %s, ModelCode: %s, Symbol: %s, SecType: %s, Currency: %s, Position: %s, Avg Cost: %s\n", reqId, account.c_str(), modelCode.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), DecimalFunctions::decimalStringToDisplay(pos).c_str(), Utils::doubleMaxString(avgCost).c_str());
+	printf("Position Multi. Request: %d, Account: %s, ModelCode: %s, Symbol: %s, SecType: %s, Currency: %s, Position: %s, Avg Cost: %s\n", reqId, account.c_str(), modelCode.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.currency.c_str(), DecimalFunctions::decimalStringToDisplay(pos).c_str(), Utils::doubleMaxString(avgCost).c_str());
 }
 //! [positionmulti]
 
@@ -1748,25 +1748,25 @@ void CapstoneCppClient::mktDepthExchanges(const std::vector<DepthMktDataDescript
 	printf("Mkt Depth Exchanges (%lu):\n", depthMktDataDescriptions.size());
 
 	for (unsigned int i = 0; i < depthMktDataDescriptions.size(); i++) {
-        printf("Depth Mkt Data Description [%d] - exchange: %s secType: %s listingExch: %s serviceDataType: %s aggGroup: %s\n", i,
-            depthMktDataDescriptions[i].exchange.c_str(),
-            depthMktDataDescriptions[i].secType.c_str(),
-            depthMktDataDescriptions[i].listingExch.c_str(),
-            depthMktDataDescriptions[i].serviceDataType.c_str(),
-            Utils::intMaxString(depthMktDataDescriptions[i].aggGroup).c_str());
+		printf("Depth Mkt Data Description [%d] - exchange: %s secType: %s listingExch: %s serviceDataType: %s aggGroup: %s\n", i,
+			depthMktDataDescriptions[i].exchange.c_str(),
+			depthMktDataDescriptions[i].secType.c_str(),
+			depthMktDataDescriptions[i].listingExch.c_str(),
+			depthMktDataDescriptions[i].serviceDataType.c_str(),
+			Utils::intMaxString(depthMktDataDescriptions[i].aggGroup).c_str());
 	}
 }
 //! [mktDepthExchanges]
 
 //! [tickNews]
 void CapstoneCppClient::tickNews(int tickerId, time_t timeStamp, const std::string& providerCode, const std::string& articleId, const std::string& headline, const std::string& extraData) {
-    char timeStampStr[80];
+	char timeStampStr[80];
 #if defined(IB_WIN32)
-    ctime_s(timeStampStr, sizeof(timeStampStr), &(timeStamp /= 1000));
+	ctime_s(timeStampStr, sizeof(timeStampStr), &(timeStamp /= 1000));
 #else
-    ctime_r(&(timeStamp /= 1000), timeStampStr);
+	ctime_r(&(timeStamp /= 1000), timeStampStr);
 #endif
-    printf("News Tick. TickerId: %d, TimeStamp: %s, ProviderCode: %s, ArticleId: %s, Headline: %s, ExtraData: %s\n", tickerId, timeStampStr, providerCode.c_str(), articleId.c_str(), headline.c_str(), extraData.c_str());
+	printf("News Tick. TickerId: %d, TimeStamp: %s, ProviderCode: %s, ArticleId: %s, Headline: %s, ExtraData: %s\n", tickerId, timeStampStr, providerCode.c_str(), articleId.c_str(), headline.c_str(), extraData.c_str());
 }
 //! [tickNews]
 
@@ -1840,16 +1840,16 @@ void CapstoneCppClient::headTimestamp(int reqId, const std::string& headTimestam
 void CapstoneCppClient::histogramData(int reqId, const HistogramDataVector& data) {
 	printf("Histogram. ReqId: %d, data length: %lu\n", reqId, data.size());
 
-    for (const HistogramEntry& entry : data) {
-        printf("\t price: %s, size: %s\n", Utils::doubleMaxString(entry.price).c_str(), DecimalFunctions::decimalStringToDisplay(entry.size).c_str());
+	for (const HistogramEntry& entry : data) {
+		printf("\t price: %s, size: %s\n", Utils::doubleMaxString(entry.price).c_str(), DecimalFunctions::decimalStringToDisplay(entry.size).c_str());
 	}
 }
 //! [histogramData]
 
 //! [historicalDataUpdate]
 void CapstoneCppClient::historicalDataUpdate(TickerId reqId, const Bar& bar) {
-    printf( "HistoricalDataUpdate. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, bar.time.c_str(), 
-        Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(), Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), 
+	printf( "HistoricalDataUpdate. ReqId: %ld - Date: %s, Open: %s, High: %s, Low: %s, Close: %s, Volume: %s, Count: %s, WAP: %s\n", reqId, bar.time.c_str(), 
+		Utils::doubleMaxString(bar.open).c_str(), Utils::doubleMaxString(bar.high).c_str(), Utils::doubleMaxString(bar.low).c_str(), Utils::doubleMaxString(bar.close).c_str(), 
 		DecimalFunctions::decimalStringToDisplay(bar.volume).c_str(), Utils::intMaxString(bar.count).c_str(), DecimalFunctions::decimalStringToDisplay(bar.wap).c_str());
 }
 //! [historicalDataUpdate]
@@ -1868,132 +1868,132 @@ void CapstoneCppClient::rerouteMktDepthReq(int reqId, int conid, const std::stri
 
 //! [marketRule]
 void CapstoneCppClient::marketRule(int marketRuleId, const std::vector<PriceIncrement> &priceIncrements) {
-    printf("Market Rule Id: %s\n", Utils::intMaxString(marketRuleId).c_str());
-    for (unsigned int i = 0; i < priceIncrements.size(); i++) {
-        printf("Low Edge: %s, Increment: %s\n", Utils::doubleMaxString(priceIncrements[i].lowEdge).c_str(), Utils::doubleMaxString(priceIncrements[i].increment).c_str());
-    }
+	printf("Market Rule Id: %s\n", Utils::intMaxString(marketRuleId).c_str());
+	for (unsigned int i = 0; i < priceIncrements.size(); i++) {
+		printf("Low Edge: %s, Increment: %s\n", Utils::doubleMaxString(priceIncrements[i].lowEdge).c_str(), Utils::doubleMaxString(priceIncrements[i].increment).c_str());
+	}
 }
 //! [marketRule]
 
 //! [pnl]
 void CapstoneCppClient::pnl(int reqId, double dailyPnL, double unrealizedPnL, double realizedPnL) {
-    printf("PnL. ReqId: %d, daily PnL: %s, unrealized PnL: %s, realized PnL: %s\n", reqId, Utils::doubleMaxString(dailyPnL).c_str(), Utils::doubleMaxString(unrealizedPnL).c_str(), 
-        Utils::doubleMaxString(realizedPnL).c_str());
+	printf("PnL. ReqId: %d, daily PnL: %s, unrealized PnL: %s, realized PnL: %s\n", reqId, Utils::doubleMaxString(dailyPnL).c_str(), Utils::doubleMaxString(unrealizedPnL).c_str(), 
+		Utils::doubleMaxString(realizedPnL).c_str());
 }
 //! [pnl]
 
 //! [pnlsingle]
 void CapstoneCppClient::pnlSingle(int reqId, Decimal pos, double dailyPnL, double unrealizedPnL, double realizedPnL, double value) {
-    printf("PnL Single. ReqId: %d, pos: %s, daily PnL: %s, unrealized PnL: %s, realized PnL: %s, value: %s\n", reqId, DecimalFunctions::decimalStringToDisplay(pos).c_str(), Utils::doubleMaxString(dailyPnL).c_str(),
-        Utils::doubleMaxString(unrealizedPnL).c_str(), Utils::doubleMaxString(realizedPnL).c_str(), Utils::doubleMaxString(value).c_str());
+	printf("PnL Single. ReqId: %d, pos: %s, daily PnL: %s, unrealized PnL: %s, realized PnL: %s, value: %s\n", reqId, DecimalFunctions::decimalStringToDisplay(pos).c_str(), Utils::doubleMaxString(dailyPnL).c_str(),
+		Utils::doubleMaxString(unrealizedPnL).c_str(), Utils::doubleMaxString(realizedPnL).c_str(), Utils::doubleMaxString(value).c_str());
 }
 //! [pnlsingle]
 
 //! [historicalticks]
 void CapstoneCppClient::historicalTicks(int reqId, const std::vector<HistoricalTick>& ticks, bool done) {
-    for (const HistoricalTick& tick : ticks) {
-        std::time_t t = tick.time;
-        char timeStr[80];
+	for (const HistoricalTick& tick : ticks) {
+		std::time_t t = tick.time;
+		char timeStr[80];
 #if defined(IB_WIN32)
-        ctime_s(timeStr, sizeof(timeStr), &t);
+		ctime_s(timeStr, sizeof(timeStr), &t);
 #else
-        ctime_r(&t, timeStr);
+		ctime_r(&t, timeStr);
 #endif
-        std::cout << "Historical tick. ReqId: " << reqId << ", time: " << timeStr << ", price: "<< Utils::doubleMaxString(tick.price).c_str()	<< ", size: " << DecimalFunctions::decimalStringToDisplay(tick.size).c_str() << std::endl;
-    }
+		std::cout << "Historical tick. ReqId: " << reqId << ", time: " << timeStr << ", price: "<< Utils::doubleMaxString(tick.price).c_str()	<< ", size: " << DecimalFunctions::decimalStringToDisplay(tick.size).c_str() << std::endl;
+	}
 }
 //! [historicalticks]
 
 //! [historicalticksbidask]
 void CapstoneCppClient::historicalTicksBidAsk(int reqId, const std::vector<HistoricalTickBidAsk>& ticks, bool done) {
-    for (const HistoricalTickBidAsk& tick : ticks) {
-        std::time_t t = tick.time;
-        char timeStr[80];
+	for (const HistoricalTickBidAsk& tick : ticks) {
+		std::time_t t = tick.time;
+		char timeStr[80];
 #if defined(IB_WIN32)
-        ctime_s(timeStr, sizeof(timeStr), &t);
+		ctime_s(timeStr, sizeof(timeStr), &t);
 #else
-        ctime_r(&t, timeStr);
+		ctime_r(&t, timeStr);
 #endif
-        std::cout << "Historical tick bid/ask. ReqId: " << reqId << ", time: " << timeStr << ", price bid: "<< Utils::doubleMaxString(tick.priceBid).c_str()	<<
-            ", price ask: "<< Utils::doubleMaxString(tick.priceAsk).c_str() << ", size bid: " << DecimalFunctions::decimalStringToDisplay(tick.sizeBid).c_str() << ", size ask: " << DecimalFunctions::decimalStringToDisplay(tick.sizeAsk).c_str() <<
-            ", bidPastLow: " << tick.tickAttribBidAsk.bidPastLow << ", askPastHigh: " << tick.tickAttribBidAsk.askPastHigh << std::endl;
-    }
+		std::cout << "Historical tick bid/ask. ReqId: " << reqId << ", time: " << timeStr << ", price bid: "<< Utils::doubleMaxString(tick.priceBid).c_str()	<<
+			", price ask: "<< Utils::doubleMaxString(tick.priceAsk).c_str() << ", size bid: " << DecimalFunctions::decimalStringToDisplay(tick.sizeBid).c_str() << ", size ask: " << DecimalFunctions::decimalStringToDisplay(tick.sizeAsk).c_str() <<
+			", bidPastLow: " << tick.tickAttribBidAsk.bidPastLow << ", askPastHigh: " << tick.tickAttribBidAsk.askPastHigh << std::endl;
+	}
 }
 //! [historicalticksbidask]
 
 //! [historicaltickslast]
 void CapstoneCppClient::historicalTicksLast(int reqId, const std::vector<HistoricalTickLast>& ticks, bool done) {
-    for (HistoricalTickLast tick : ticks) {
-        std::time_t t = tick.time;
-        char timeStr[80];
+	for (HistoricalTickLast tick : ticks) {
+		std::time_t t = tick.time;
+		char timeStr[80];
 #if defined(IB_WIN32)
-        ctime_s(timeStr, sizeof(timeStr), &t);
+		ctime_s(timeStr, sizeof(timeStr), &t);
 #else
-        ctime_r(&t, timeStr);
+		ctime_r(&t, timeStr);
 #endif
-        std::cout << "Historical tick last. ReqId: " << reqId << ", time: " << timeStr << ", price: "<< Utils::doubleMaxString(tick.price).c_str() <<
-            ", size: " << DecimalFunctions::decimalStringToDisplay(tick.size).c_str() << ", exchange: " << tick.exchange << ", special conditions: " << tick.specialConditions <<
-            ", unreported: " << tick.tickAttribLast.unreported << ", pastLimit: " << tick.tickAttribLast.pastLimit << std::endl;
-    }
+		std::cout << "Historical tick last. ReqId: " << reqId << ", time: " << timeStr << ", price: "<< Utils::doubleMaxString(tick.price).c_str() <<
+			", size: " << DecimalFunctions::decimalStringToDisplay(tick.size).c_str() << ", exchange: " << tick.exchange << ", special conditions: " << tick.specialConditions <<
+			", unreported: " << tick.tickAttribLast.unreported << ", pastLimit: " << tick.tickAttribLast.pastLimit << std::endl;
+	}
 }
 //! [historicaltickslast]
 
 //! [tickbytickalllast]
 void CapstoneCppClient::tickByTickAllLast(int reqId, int tickType, time_t time, double price, Decimal size, const TickAttribLast& tickAttribLast, const std::string& exchange, const std::string& specialConditions) {
-    char timeStr[80];
+	char timeStr[80];
 #if defined(IB_WIN32)
-    ctime_s(timeStr, sizeof(timeStr), &time);
+	ctime_s(timeStr, sizeof(timeStr), &time);
 #else
-    ctime_r(&time, timeStr);
+	ctime_r(&time, timeStr);
 #endif
-    printf("Tick-By-Tick. ReqId: %d, TickType: %s, Time: %s, Price: %s, Size: %s, PastLimit: %d, Unreported: %d, Exchange: %s, SpecialConditions:%s\n", 
-        reqId, (tickType == 1 ? "Last" : "AllLast"), timeStr, Utils::doubleMaxString(price).c_str(), DecimalFunctions::decimalStringToDisplay(size).c_str(), tickAttribLast.pastLimit, tickAttribLast.unreported, exchange.c_str(), specialConditions.c_str());
+	printf("Tick-By-Tick. ReqId: %d, TickType: %s, Time: %s, Price: %s, Size: %s, PastLimit: %d, Unreported: %d, Exchange: %s, SpecialConditions:%s\n", 
+		reqId, (tickType == 1 ? "Last" : "AllLast"), timeStr, Utils::doubleMaxString(price).c_str(), DecimalFunctions::decimalStringToDisplay(size).c_str(), tickAttribLast.pastLimit, tickAttribLast.unreported, exchange.c_str(), specialConditions.c_str());
 }
 //! [tickbytickalllast]
 
 //! [tickbytickbidask]
 void CapstoneCppClient::tickByTickBidAsk(int reqId, time_t time, double bidPrice, double askPrice, Decimal bidSize, Decimal askSize, const TickAttribBidAsk& tickAttribBidAsk) {
-    char timeStr[80];
+	char timeStr[80];
 #if defined(IB_WIN32)
-    ctime_s(timeStr, sizeof(timeStr), &time);
+	ctime_s(timeStr, sizeof(timeStr), &time);
 #else
-    ctime_r(&time, timeStr);
+	ctime_r(&time, timeStr);
 #endif
-    printf("Tick-By-Tick. ReqId: %d, TickType: BidAsk, Time: %s, BidPrice: %s, AskPrice: %s, BidSize: %s, AskSize: %s, BidPastLow: %d, AskPastHigh: %d\n", 
-        reqId, timeStr, Utils::doubleMaxString(bidPrice).c_str(), Utils::doubleMaxString(askPrice).c_str(), DecimalFunctions::decimalStringToDisplay(bidSize).c_str(), DecimalFunctions::decimalStringToDisplay(askSize).c_str(), tickAttribBidAsk.bidPastLow, tickAttribBidAsk.askPastHigh);
+	printf("Tick-By-Tick. ReqId: %d, TickType: BidAsk, Time: %s, BidPrice: %s, AskPrice: %s, BidSize: %s, AskSize: %s, BidPastLow: %d, AskPastHigh: %d\n", 
+		reqId, timeStr, Utils::doubleMaxString(bidPrice).c_str(), Utils::doubleMaxString(askPrice).c_str(), DecimalFunctions::decimalStringToDisplay(bidSize).c_str(), DecimalFunctions::decimalStringToDisplay(askSize).c_str(), tickAttribBidAsk.bidPastLow, tickAttribBidAsk.askPastHigh);
 }
 //! [tickbytickbidask]
 
 //! [tickbytickmidpoint]
 void CapstoneCppClient::tickByTickMidPoint(int reqId, time_t time, double midPoint) {
-    char timeStr[80];
+	char timeStr[80];
 #if defined(IB_WIN32)
-    ctime_s(timeStr, sizeof(timeStr), &time);
+	ctime_s(timeStr, sizeof(timeStr), &time);
 #else
-    ctime_r(&time, timeStr);
+	ctime_r(&time, timeStr);
 #endif
-    printf("Tick-By-Tick. ReqId: %d, TickType: MidPoint, Time: %s, MidPoint: %s\n", reqId, timeStr, Utils::doubleMaxString(midPoint).c_str());
+	printf("Tick-By-Tick. ReqId: %d, TickType: MidPoint, Time: %s, MidPoint: %s\n", reqId, timeStr, Utils::doubleMaxString(midPoint).c_str());
 }
 //! [tickbytickmidpoint]
 
 //! [orderbound]
 void CapstoneCppClient::orderBound(long long permId, int clientId, int orderId) {
-    printf("Order bound. PermId: %s, clientId: %s, orderId: %s\n", Utils::llongMaxString(permId).c_str(), Utils::intMaxString(clientId).c_str(), Utils::intMaxString(orderId).c_str());
+	printf("Order bound. PermId: %s, clientId: %s, orderId: %s\n", Utils::llongMaxString(permId).c_str(), Utils::intMaxString(clientId).c_str(), Utils::intMaxString(orderId).c_str());
 }
 //! [orderbound]
 
 //! [completedorder]
 void CapstoneCppClient::completedOrder(const Contract& contract, const Order& order, const OrderState& orderState) {
-    printf( "CompletedOrder. PermId: %s, ParentPermId: %s, Account: %s, Symbol: %s, SecType: %s, Exchange: %s:, Action: %s, OrderType: %s, TotalQty: %s, CashQty: %s, FilledQty: %s, "
-        "LmtPrice: %s, AuxPrice: %s, Status: %s, CompletedTime: %s, CompletedStatus: %s, MinTradeQty: %s, MinCompeteSize: %s, CompeteAgainstBestOffset: %s, MidOffsetAtWhole: %s, MidOffsetAtHalf: %s, "
-        "CustomerAccount: %s, ProfessionalCustomer: %s\n",
-        Utils::llongMaxString(order.permId).c_str(), Utils::llongMaxString(order.parentPermId).c_str(), order.account.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.exchange.c_str(),
-        order.action.c_str(), order.orderType.c_str(), DecimalFunctions::decimalStringToDisplay(order.totalQuantity).c_str(), Utils::doubleMaxString(order.cashQty).c_str(), DecimalFunctions::decimalStringToDisplay(order.filledQuantity).c_str(),
-        Utils::doubleMaxString(order.lmtPrice).c_str(), Utils::doubleMaxString(order.auxPrice).c_str(), orderState.status.c_str(), orderState.completedTime.c_str(), orderState.completedStatus.c_str(),
-        Utils::intMaxString(order.minTradeQty).c_str(), Utils::intMaxString(order.minCompeteSize).c_str(),
-        order.competeAgainstBestOffset == COMPETE_AGAINST_BEST_OFFSET_UP_TO_MID ? "UpToMid" : Utils::doubleMaxString(order.competeAgainstBestOffset).c_str(),
-        Utils::doubleMaxString(order.midOffsetAtWhole).c_str(), Utils::doubleMaxString(order.midOffsetAtHalf).c_str(),
-        order.customerAccount.c_str(), (order.professionalCustomer ? "true" : "false"));
+	printf( "CompletedOrder. PermId: %s, ParentPermId: %s, Account: %s, Symbol: %s, SecType: %s, Exchange: %s:, Action: %s, OrderType: %s, TotalQty: %s, CashQty: %s, FilledQty: %s, "
+		"LmtPrice: %s, AuxPrice: %s, Status: %s, CompletedTime: %s, CompletedStatus: %s, MinTradeQty: %s, MinCompeteSize: %s, CompeteAgainstBestOffset: %s, MidOffsetAtWhole: %s, MidOffsetAtHalf: %s, "
+		"CustomerAccount: %s, ProfessionalCustomer: %s\n",
+		Utils::llongMaxString(order.permId).c_str(), Utils::llongMaxString(order.parentPermId).c_str(), order.account.c_str(), contract.symbol.c_str(), contract.secType.c_str(), contract.exchange.c_str(),
+		order.action.c_str(), order.orderType.c_str(), DecimalFunctions::decimalStringToDisplay(order.totalQuantity).c_str(), Utils::doubleMaxString(order.cashQty).c_str(), DecimalFunctions::decimalStringToDisplay(order.filledQuantity).c_str(),
+		Utils::doubleMaxString(order.lmtPrice).c_str(), Utils::doubleMaxString(order.auxPrice).c_str(), orderState.status.c_str(), orderState.completedTime.c_str(), orderState.completedStatus.c_str(),
+		Utils::intMaxString(order.minTradeQty).c_str(), Utils::intMaxString(order.minCompeteSize).c_str(),
+		order.competeAgainstBestOffset == COMPETE_AGAINST_BEST_OFFSET_UP_TO_MID ? "UpToMid" : Utils::doubleMaxString(order.competeAgainstBestOffset).c_str(),
+		Utils::doubleMaxString(order.midOffsetAtWhole).c_str(), Utils::doubleMaxString(order.midOffsetAtHalf).c_str(),
+		order.customerAccount.c_str(), (order.professionalCustomer ? "true" : "false"));
 }
 //! [completedorder]
 
@@ -2032,7 +2032,7 @@ void CapstoneCppClient::historicalSchedule(int reqId, const std::string& startDa
 
 //! [userInfo]
 void CapstoneCppClient::userInfo(int reqId, const std::string& whiteBrandingId) {
-    printf("User Info. ReqId: %d, WhiteBrandingId: %s\n", reqId, whiteBrandingId.c_str());
+	printf("User Info. ReqId: %d, WhiteBrandingId: %s\n", reqId, whiteBrandingId.c_str());
 }
 //! [userInfo]
 

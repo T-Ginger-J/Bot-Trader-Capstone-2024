@@ -1,4 +1,4 @@
-﻿#include "SharedData.h"
+﻿﻿#include "SharedData.h"
 
 #include "StdAfx.h"
 
@@ -389,7 +389,7 @@ void LoadSettings() {
 
 
 			// Load text from CSV
-			#define LOAD_TEXT(hwnd) \
+#define LOAD_TEXT(hwnd) \
 				if (token) { \
 					if (wcscmp(token, L"NULL") == 0) \
 						SetWindowTextW(hwnd, L""); \
@@ -408,7 +408,7 @@ void LoadSettings() {
 
 			// Handle Loading Indicies
 			int index;
-			#define LOAD_CHOICE(hwnd) \
+#define LOAD_CHOICE(hwnd) \
 				if (token && swscanf_s(token, L"%d", &index) == 1) { \
 					SendMessageW(hwnd, CB_SETCURSEL, index, 0); \
 					token = wcstok_s(NULL, L",", &context); \
@@ -731,7 +731,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		// Activate Button
 		CreateWindowW(L"BUTTON", L"Activate Bot", WS_CHILD | WS_VISIBLE,
 			90, 450, 100, 30, hwnd, (HMENU)ID_ACTIVATE_BUTTON_BOT, NULL, NULL);
-		
+
 
 		resetWorkingDirectory();
 		LoadSavedPositions(hPositionList);
@@ -755,7 +755,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				GetWindowTextW(hNumberLots, numberLotsText, 256);
 
 				wchar_t combinedText[768];
-				wsprintfW(combinedText, L"%s,%s,%s",entryTimeText, positionText, numberLotsText);
+				wsprintfW(combinedText, L"%s,%s,%s", entryTimeText, positionText, numberLotsText);
 
 				SendMessageW(hBotDetails, LB_ADDSTRING, 0, (LPARAM)combinedText);
 			}
@@ -917,7 +917,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 
 				std::time_t t = std::time(nullptr);
 				std::tm tm{};
-				localtime_s(&tm, &t);  
+				localtime_s(&tm, &t);
 
 				std::wstringstream wss;
 				wss << std::put_time(&tm, L"%Y%m%d");
@@ -927,7 +927,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 				mesg.activationTime = finaltime;
 
 				double lotValue = wcstold(lotNumber, NULL);
-				
+
 				mesg.lots = lotValue;
 
 				messageQueue.push(mesg);
@@ -1045,4 +1045,3 @@ int main(int argc, char** argv)
 	guiThread.join();
 	printf("End of C++ Socket Client Test\n");
 }
-

@@ -73,7 +73,7 @@ struct TradeRecord {
 //! [ewrapperimpl]
 class CapstoneCppClient : public EWrapper
 {
-//! [ewrapperimpl]
+	//! [ewrapperimpl]
 public:
 
 	CapstoneCppClient();
@@ -87,7 +87,7 @@ public:
 
 public:
 
-	bool connect(const char * host, int port, int clientId = 0);
+	bool connect(const char* host, int port, int clientId = 0);
 	void disconnect() const;
 	bool isConnected() const;
 
@@ -103,7 +103,7 @@ private:
 	void reqTickByTickData();
 
 	void reqCurrentTime();
-	
+
 	/////////////////////////////////////////
 	//OUR METHODS STUBS BELOW
 	void getComboOrder();
@@ -123,20 +123,20 @@ private:
 	//////////////////////////////////////////////////
 public:
 	// events
-	#include "EWrapper_prototypes.h"
+#include "EWrapper_prototypes.h"
 
 
 private:
 	void printContractMsg(const Contract& contract);
 	void printContractDetailsMsg(const ContractDetails& contractDetails);
-	void printContractDetailsSecIdList(const TagValueListSPtr &secIdList);
+	void printContractDetailsSecIdList(const TagValueListSPtr& secIdList);
 	void printBondContractDetailsMsg(const ContractDetails& contractDetails);
-	void printContractDetailsIneligibilityReasonList(const IneligibilityReasonListSPtr &ineligibilityReasonList);
+	void printContractDetailsIneligibilityReasonList(const IneligibilityReasonListSPtr& ineligibilityReasonList);
 
 private:
 	//! [socket_declare]
 	EReaderOSSignal m_osSignal;
-	EClientSocket * const m_pClient;
+	EClientSocket* const m_pClient;
 	//! [socket_declare]
 	State m_state;
 	time_t m_sleepDeadline;
@@ -145,7 +145,7 @@ private:
 	std::unique_ptr<EReader> m_pReader;
 	bool m_extraAuth;
 	std::string m_bboExchange;
-	
+
 };
 
 #endif
