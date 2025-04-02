@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <iomanip>  
 #include <sstream> 
+#include <deque>
 
 
 // Global (or class‐member) maps to hold partial data
@@ -93,6 +94,8 @@ Decimal amountOfLots;
 std::unordered_map<OrderId, Contract> contractMap;
 
 std::unordered_map<time_t, Message> pendingOrderMap;
+
+std::deque<TradeRecord> openTrades;
 
 time_t currentOrderFromMap;
 
@@ -1021,7 +1024,7 @@ void CapstoneCppClient::execDetails(int reqId, const Contract& contract, const E
 	// Save mapping from execId to orderId
 	g_execIdToOrderId[execution.execId] = execution.orderId;
 
-	// Check if execution is an entry or exit order
+	/*// Check if execution is an entry or exit order
 	auto it = g_tradeMap.find(execution.orderId);
 	if (it == g_tradeMap.end()) {
 		// Entry order
@@ -1056,6 +1059,60 @@ void CapstoneCppClient::execDetails(int reqId, const Contract& contract, const E
 
 		g_tradeMap.erase(it);
 		g_orderCommission.erase(execution.orderId);
+	}*/
+	std::string currentSide = execution.side;
+	auto matchOpenTrade = [&](const TradeRecord& tr) {
+		return tr.symbol == contract.symbol &&
+			((currentSide == "BUY" && tr.side == "SELL") ||  // Closing short
+				(currentSide == "SELL" && tr.side == "BUY"));   // Closing long
+	};
+
+	auto it = std::find_if(openTrades.begin(), openTrades.end(), matchOpenTrade);
+
+	if (it != openTrades.end()) {
+		// Process as exit trade
+		double closeAmount = min(shares, it->shares);
+		double remainingShares = it->shares - closeAmount;
+
+		// Calculate gross profit
+		double grossProfit = 0.0;
+		if (it->side == "BUY") { // Closing long
+			grossProfit = (execution.price - it->entryPrice) * closeAmount;
+		}
+		else { // Closing short
+			grossProfit = (it->entryPrice - execution.price) * closeAmount;
+		}
+
+		double entryCommission = g_orderCommission[it->entryOrderId];
+		double exitCommission = g_orderCommission[execution.orderId];
+		double netProfit = grossProfit - entryCommission - exitCommission;
+
+		TradeRecord closedRecord = *it;
+		closedRecord.exitTime = execution.time;
+		closedRecord.exitPrice = execution.price;
+		closedRecord.exitOrderId = execution.orderId;
+		closedRecord.shares = closeAmount;
+
+		appendTradeRecordToCsv(closedRecord, grossProfit,
+			entryCommission + exitCommission, netProfit);
+
+		if (remainingShares > 0) {
+			it->shares = remainingShares;
+		}
+		else {
+			openTrades.erase(it);
+		}
+	}
+	else {
+		TradeRecord newTrade;
+		newTrade.symbol = contract.symbol;
+		newTrade.entryTime = execution.time;
+		newTrade.entryPrice = execution.price;
+		newTrade.shares = shares;
+		newTrade.side = execution.side;
+		newTrade.entryOrderId = execution.orderId;
+		newTrade.exitOrderId = -1;
+		openTrades.push_back(newTrade);
 	}
 }
 //! [execdetails]
