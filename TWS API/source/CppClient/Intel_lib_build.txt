@@ -1,0 +1,114 @@
+=============================================================================================
+How to build Intel Decimal Floating Point Library under Windows (static library - libbid.lib)
+=============================================================================================
+
+1) Extract [Intel Decimal Floating Point Library] (https://www.intel.com/content/www/us/en/developer/articles/tool/intel-decimal-floating-point-math-library.html) 
+to some directory
+
+2) In IntelRDFPMathLib20U2/LIBRARY directory execute the following commands:
+nmake -fmakefile.mak CC=cl CALL_BY_REF=0 GLOBAL_RND=0 GLOBAL_FLAGS=0 UNCHANGED_BINARY_FLAGS=0
+del *.obj
+
+Note: in the sample above all build flags are set to 0. See IntelRDFPMathLib20U2/README for details.
+
+3) As result there is libbid.lib library generated. You can use it with TestCppClientStatic.
+
+
+
+==============================================================================================
+How to build Intel Decimal Floating Point Library under Windows (dynamic library - biddll.dll)
+==============================================================================================
+1) Extract [Intel Decimal Floating Point Library] (https://www.intel.com/content/www/us/en/developer/articles/tool/intel-decimal-floating-point-math-library.html) 
+to some directory
+
+2) To make Windows DLL some changes to source code and makefile are required.
+In IntelRDFPMathLib20U2/LIBRARY/src/makefile.mak replace:
+a) 
+line 36:
+	AR=lib
+with
+	AR=link
+
+b) 
+line 102:
+	BID_LIB=libbid.lib
+with	
+	BID_LIB=biddll.dll
+
+c) 
+line 228:
+	$(AR) $(AOPT) /OUT:$(BID_LIB) $(BID_OBJS) $(FLOAT128_OBJS) $(FLOAT53_OBJS)
+with
+	$(AR) $(AOPT) /DLL /OUT:$(BID_LIB) $(BID_OBJS) $(FLOAT128_OBJS) $(FLOAT53_OBJS)
+
+d) 
+line 233:
+	$(AR) $(AOPT) /OUT:$(BID_LIB) $(BID_OBJS)
+with
+	$(AR) $(AOPT) /DLL /OUT:$(BID_LIB) $(BID_OBJS)
+
+
+3) In IntelRDFPMathLib20U2/LIBRARY/src/bid_conf.h insert the following code block starting from line 36
+
+#ifndef BID_EXTERN_C_EXT
+#ifdef __cplusplus
+#define BID_EXTERN_C_EXT extern "C" __declspec(dllexport)
+#else
+#define BID_EXTERN_C_EXT extern __declspec(dllexport)
+#endif
+#endif
+
+
+4) In IntelRDFPMathLib20U2/LIBRARY/src/bid_functions.h replace:
+
+a) line 3385:
+     BID_EXTERN_C BID_UINT64 bid64_add (BID_UINT64 x, BID_UINT64 y
+   with:
+     BID_EXTERN_C_EXT BID_UINT64 bid64_add (BID_UINT64 x, BID_UINT64 y
+
+b) line 3397: 
+     BID_EXTERN_C BID_UINT64 bid64_sub (BID_UINT64 x,
+   with:
+     BID_EXTERN_C_EXT BID_UINT64 bid64_sub (BID_UINT64 x,
+
+c) line 3410:
+     BID_EXTERN_C BID_UINT64 bid64_mul (BID_UINT64 x, BID_UINT64 y
+   with:
+     BID_EXTERN_C_EXT BID_UINT64 bid64_mul (BID_UINT64 x, BID_UINT64 y
+
+d) line 3422:
+     BID_EXTERN_C BID_UINT64 bid64_div (BID_UINT64 x,
+   with:
+     BID_EXTERN_C_EXT BID_UINT64 bid64_div (BID_UINT64 x,
+
+e) line 4820:
+     BID_EXTERN_C void bid64_to_string (char *ps, BID_UINT64 x
+   with 
+     BID_EXTERN_C_EXT void bid64_to_string (char *ps, BID_UINT64 x
+
+f) line 4823:
+     BID_EXTERN_C BID_UINT64 bid64_from_string (char *ps
+   with:
+     BID_EXTERN_C_EXT BID_UINT64 bid64_from_string (char *ps
+
+g) line 4871:
+     BID_EXTERN_C BID_UINT64 binary64_to_bid64 (double x
+   with: 
+     BID_EXTERN_C_EXT BID_UINT64 binary64_to_bid64 (double x
+
+h) line 4939:
+     BID_EXTERN_C double bid64_to_binary64 (BID_UINT64 x
+   with:
+     BID_EXTERN_C_EXT double bid64_to_binary64 (BID_UINT64 x
+
+
+5) In IntelRDFPMathLib20U2/LIBRARY directory execute the following commands:
+nmake -fmakefile.mak CC=cl CALL_BY_REF=0 GLOBAL_RND=0 GLOBAL_FLAGS=0 UNCHANGED_BINARY_FLAGS=0
+del *.obj
+
+Note: in the sample above all build flags are set to 0. See IntelRDFPMathLib20U2/README for details.
+
+
+6) As result there are biddll.dll and biddll.lib libraries generated. You can use them with TestCppClient 
+(lib file to include to project and dll file to run project).
+
