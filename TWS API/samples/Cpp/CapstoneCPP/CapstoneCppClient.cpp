@@ -370,7 +370,7 @@ int CapstoneCppClient::getTzOffset(const std::wstring& tz) {
 void CapstoneCppClient::waitForGuiDataAndTime() {
 	static std::vector<Message> pendingMessages;
 
-	while (!messageQueue.isEmpty()) {
+	if (!messageQueue.isEmpty()) {
 		Message msg = messageQueue.pop();
 		msg.scheduledTime = parseActivationTime(msg);
 		pendingMessages.push_back(msg);
@@ -922,7 +922,7 @@ void CapstoneCppClient::orderStatus(OrderId orderId, const std::string& status, 
 	if (contractMap.find(orderId) != contractMap.end()) {
 		Contract contract = contractMap[orderId];
 
-		if (parentId == 0 && !DecimalFunctions::decimalToDouble(remaining) == 0.0 && (status == "Submitted" || status == "PartiallyFilled" || status == "PreSubmitted")) { //PreSubmitted is for Testing this will be removed
+		if (parentId == 0 && !DecimalFunctions::decimalToDouble(remaining) == 0.0 && (status == "Submitted" || status == "PartiallyFilled")) {//|| status == "PreSubmitted")) { //PreSubmitted is for Testing this will be removed
 			// Request market data to get the current bid/ask prices
 			m_pClient->reqMktData(postOrderTickID, contract, "", false, false, TagValueListSPtr());
 			isComboCheck = true;
