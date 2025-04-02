@@ -863,7 +863,6 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			if (index != LB_ERR) {
 				wchar_t fileName[MAX_PATH];
 				SendMessageW(hBotList, LB_GETTEXT, index, (LPARAM)fileName);
-				// Load the selected file
 				wchar_t filePath[MAX_PATH];
 				wcscpy_s(filePath, L"Bots\\");
 				PathAppendW(filePath, fileName);
