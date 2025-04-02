@@ -9,7 +9,7 @@
 #define UNICODE
 #define _UNICODE
 
-#include "client/StdAfx.h"
+#include "StdAfx.h"
 #include <thread>
 #include <iostream>
 #include <fstream>

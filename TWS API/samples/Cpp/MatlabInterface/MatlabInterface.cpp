@@ -7,7 +7,7 @@
 #include <sstream>
 using namespace std;
 
-#include "SharedData.h"
+//#include "SharedData.h"
 
 #include "StdAfx.h"
 
@@ -229,7 +229,7 @@ int executeBot(const char* host, int port, const char* connectionOptions, int ar
 		printf("No bot path given.");
 		return 1;
 	}
-	char* filename = argv[0];
+	string filename = argv[0];
 
 	//GET BOT
 	int selIndex;
@@ -239,7 +239,7 @@ int executeBot(const char* host, int port, const char* connectionOptions, int ar
 	}
 	wchar_t botFileName[MAX_PATH];
 	wchar_t botFilePath[MAX_PATH];
-	mbstowcs(botFileName, filename, strlen(filename) + 1);
+	wcscpy_s(botFileName, std::wstring(filename.begin(), filename.end()).c_str());
 
 	wcscpy_s(botFilePath, L"Bots\\");
 	PathAppendW(botFilePath, botFileName);
@@ -442,9 +442,9 @@ int createBot(const char* host, int port, const char* connectionOptions, int arg
 	ofn.lpstrInitialDir = L"Bots\\";
 
 	// Show save file dialog
-	if (GetSaveFileNameW(&ofn) == 0) {
+	/*if (GetSaveFileNameW(&ofn) == 0) {
 		return;
-	}
+	}*/
 
 	wchar_t filePath[MAX_PATH];
 	wcscpy_s(filePath, L"Bots\\");
