@@ -28,18 +28,20 @@
 #define ID_BACK_ACTION   13
 #define ID_SAVE_BUTTON   14
 #define ID_LOAD_BUTTON   15
-#define ID_FILE_LIST     16
+#define ID_DELETE_BUTTON 16
+#define ID_FILE_LIST     17
 
 // Option Bot IDs
-#define ID_SAVE_BUTTON_BOT     17
-#define ID_ADD_BUTTON_BOT      18
-#define ID_CLEAR_BUTTON_BOT    19
-#define ID_BOT_DETAILS_LIST    20
-#define ID_POSITION_LIST       21
-#define ID_BOT_LIST            22
-#define ID_ACTIVATE_BUTTON_BOT 23
-#define ID_REMOVE_BUTTON_BOT   24
-#define ID_NUMBER_LOTS         25
+#define ID_SAVE_BUTTON_BOT     18
+#define ID_ADD_BUTTON_BOT      19
+#define ID_CLEAR_BUTTON_BOT    20
+#define ID_BOT_DETAILS_LIST    21
+#define ID_POSITION_LIST       22
+#define ID_BOT_LIST            23
+#define ID_ACTIVATE_BUTTON_BOT 24
+#define ID_REMOVE_BUTTON_BOT   25
+#define ID_NUMBER_LOTS         26
+#define ID_DELETE_BUTTON_BOT   27
 
 
 const unsigned MAX_ATTEMPTS = 50;
@@ -64,7 +66,7 @@ void resetWorkingDirectory() {
 }
 
 // Load position settings into position creator
-void LoadSettingsFromFile(const wchar_t* filePath) {
+void LoadPositionSettingsFromFile(const wchar_t* filePath) {
 	FILE* file = NULL;
 	errno_t err = _wfopen_s(&file, filePath, L"r");
 	if (err == 0 && file) {
@@ -115,6 +117,40 @@ void LoadSettingsFromFile(const wchar_t* filePath) {
 	}
 }
 
+void LoadBotDataFromFile(const wchar_t* filePath, HWND listbox) {
+	FILE* file = NULL;
+	errno_t err = _wfopen_s(&file, filePath, L"r, ccs=UTF-16LE");  // Open the file as UTF-16
+
+	if (err == 0 && file) {
+		wchar_t buffer[1024];  // Buffer to hold each line from the file
+		BOOL isFirstLine = TRUE;
+
+		// Read each line from the file
+		while (fgetws(buffer, sizeof(buffer) / sizeof(wchar_t), file)) {
+			// Remove BOM on the first line if it exists (UTF-16 BOM is 0xFEFF)
+			if (isFirstLine && buffer[0] == 0xFEFF) {
+				memmove(buffer, buffer + 1, (wcslen(buffer) + 1) * sizeof(wchar_t)); // Remove BOM
+				isFirstLine = FALSE;
+			}
+
+			// Trim newline character from the line
+			size_t len = wcslen(buffer);
+			if (len > 0 && buffer[len - 1] == L'\n') {
+				buffer[len - 1] = L'\0';
+			}
+
+			// Add the line to the listbox
+			SendMessageW(listbox, LB_ADDSTRING, 0, (LPARAM)buffer);
+		}
+
+		fclose(file);
+	}
+	else {
+		// Display error if the file couldn't be opened
+		MessageBoxW(NULL, L"Failed to load bot data from the file.", L"Error", MB_ICONERROR);
+	}
+}
+
 void LoadSavedPositions(HWND currentWindow) {
 
 	resetWorkingDirectory();
@@ -137,9 +173,11 @@ void LoadSavedPositions(HWND currentWindow) {
 		DWORD error = GetLastError();
 		if (error == 2) {
 			// Handles no Files Found
-			wchar_t errorMsg[256];
+			/*
+			* wchar_t errorMsg[256];
 			swprintf(errorMsg, 256, L"Could not find any files, error code: %lu", error);
 			MessageBoxW(NULL, errorMsg, L"Error", MB_ICONERROR);
+			*/
 		}
 		else {
 			// Handles Other Errors
@@ -247,7 +285,7 @@ void LoadSavedBots(HWND currentWindow) {
 
 	resetWorkingDirectory();
 
-	// Create "Presets" directory if it doesn't exist
+	// Create "Bots" directory if it doesn't exist
 	if (_wmkdir(L"Bots") != 0 && errno != EEXIST) {
 
 		// Error Handle
@@ -265,9 +303,12 @@ void LoadSavedBots(HWND currentWindow) {
 		DWORD error = GetLastError();
 		if (error == 2) {
 			// Handles no Files Found
-			wchar_t errorMsg[256];
+			/*
+			* wchar_t errorMsg[256];
 			swprintf(errorMsg, 256, L"Could not find any files, error code: %lu", error);
 			MessageBoxW(NULL, errorMsg, L"Error", MB_ICONERROR);
+			*/
+			
 		}
 		else {
 			// Handles Other Errors
@@ -435,6 +476,16 @@ void LoadSettings() {
 	}
 }
 
+void DeleteSelectedFile(const wchar_t* filePath) {
+	if (DeleteFileW(filePath)) {
+		MessageBoxW(NULL, L"File deleted successfully.", L"Success", MB_OK);
+	}
+	else {
+		MessageBoxW(NULL, L"Failed to delete file.", L"Error", MB_OK);
+	}
+}
+
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	switch (uMsg) {
 	case WM_CREATE: {
@@ -523,11 +574,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		hSL = CreateWindowW(L"EDIT", L"0", WS_CHILD | WS_VISIBLE | WS_BORDER,
 			120, 300, 100, 20, hwnd, (HMENU)ID_STOP_LOSS, NULL, NULL);
 
-		// Save and Load Buttons
+		// Save, Load, and Delete Buttons
 		CreateWindowW(L"BUTTON", L"Save", WS_CHILD | WS_VISIBLE,
 			20, 500, 100, 30, hwnd, (HMENU)ID_SAVE_BUTTON, NULL, NULL);
 		CreateWindowW(L"BUTTON", L"Load", WS_CHILD | WS_VISIBLE,
 			140, 500, 100, 30, hwnd, (HMENU)ID_LOAD_BUTTON, NULL, NULL);
+		CreateWindowW(L"BUTTON", L"Delete", WS_CHILD | WS_VISIBLE,
+			260, 500, 100, 30, hwnd, (HMENU)ID_DELETE_BUTTON, NULL, NULL);
 
 		// List of Saved Presets
 		CreateWindowW(L"STATIC", L"Saved Presets", WS_CHILD | WS_VISIBLE,
@@ -651,6 +704,20 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 			LoadSettings();
 		}
 
+		// Delete button is clicked
+		else if (LOWORD(wParam) == ID_DELETE_BUTTON) {
+			int index = SendMessageW(hFileList, LB_GETCURSEL, 0, 0);
+			if (index != LB_ERR) {
+				wchar_t fileName[MAX_PATH];
+				SendMessageW(hFileList, LB_GETTEXT, index, (LPARAM)fileName);
+				wchar_t filePath[MAX_PATH];
+				wcscpy_s(filePath, L"Presets\\");
+				PathAppendW(filePath, fileName);
+				DeleteSelectedFile(filePath);
+				LoadSavedBots(hFileList);
+			}
+		}
+
 		// File selection changes
 		else if (LOWORD(wParam) == ID_FILE_LIST && HIWORD(wParam) == LBN_SELCHANGE) {
 			int index = SendMessageW(hFileList, LB_GETCURSEL, 0, 0);
@@ -662,7 +729,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 				wcscpy_s(filePath, L"Presets\\");
 				PathAppendW(filePath, fileName);
 				// Load settings from the selected file
-				LoadSettingsFromFile(filePath);
+				LoadPositionSettingsFromFile(filePath);
 			}
 		}
 		break;
@@ -711,7 +778,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 			255, 195, 130, 30, hwnd, (HMENU)ID_REMOVE_BUTTON_BOT, NULL, NULL);
 
 		// Current Bot Group
-		CreateWindowW(L"BUTTON", L"Current Bot (Time, Position)", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
+		CreateWindowW(L"BUTTON", L"Current Bot (Lots, Time, Position)", WS_CHILD | WS_VISIBLE | BS_GROUPBOX,
 			405, 40, 250, 240, hwnd, NULL, NULL, NULL);
 		// List of Current Bot Details
 		CreateWindowW(L"STATIC", L"Selected Positions", WS_CHILD | WS_VISIBLE,
@@ -731,6 +798,9 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		// Activate Button
 		CreateWindowW(L"BUTTON", L"Activate Bot", WS_CHILD | WS_VISIBLE,
 			90, 450, 100, 30, hwnd, (HMENU)ID_ACTIVATE_BUTTON_BOT, NULL, NULL);
+		// Delete Button
+		CreateWindowW(L"BUTTON", L"Delete Bot", WS_CHILD | WS_VISIBLE,
+			90, 490, 100, 30, hwnd, (HMENU)ID_DELETE_BUTTON_BOT, NULL, NULL);
 		
 
 		resetWorkingDirectory();
@@ -782,11 +852,41 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		else if (LOWORD(wParam) == ID_REMOVE_BUTTON_BOT) {
 			// Get the selected index from the bot details list
 			int selIndex = SendMessageW(hBotDetails, LB_GETCURSEL, 0, 0);
-			if (selIndex != LB_ERR) { // Ensure something is selected
-				SendMessageW(hBotDetails, LB_DELETESTRING, selIndex, 0); // Remove selected item
+			if (selIndex != LB_ERR) {
+				SendMessageW(hBotDetails, LB_DELETESTRING, selIndex, 0);
 			}
 		}
 
+		// Delete Bot Button is clicked
+		else if (LOWORD(wParam) == ID_DELETE_BUTTON_BOT) {
+			int index = SendMessageW(hBotList, LB_GETCURSEL, 0, 0);
+			if (index != LB_ERR) {
+				wchar_t fileName[MAX_PATH];
+				SendMessageW(hBotList, LB_GETTEXT, index, (LPARAM)fileName);
+				// Load the selected file
+				wchar_t filePath[MAX_PATH];
+				wcscpy_s(filePath, L"Bots\\");
+				PathAppendW(filePath, fileName);
+				DeleteSelectedFile(filePath);
+				LoadSavedBots(hBotList);
+			}
+		}
+
+		// Bot selection changes
+		else if (LOWORD(wParam) == ID_BOT_LIST && HIWORD(wParam) == LBN_SELCHANGE) {
+			int index = SendMessageW(hBotList, LB_GETCURSEL, 0, 0);
+			if (index != LB_ERR) {
+				wchar_t fileName[MAX_PATH];
+				SendMessageW(hBotList, LB_GETTEXT, index, (LPARAM)fileName);
+				// Load the selected file
+				wchar_t filePath[MAX_PATH];
+				wcscpy_s(filePath, L"Bots\\");
+				PathAppendW(filePath, fileName);
+				// Load settings from the selected file
+				SendMessageW(hBotDetails, LB_RESETCONTENT, 0, 0);
+				LoadBotDataFromFile(filePath, hBotDetails);
+			}
+		}
 		break;
 
 	case WM_DESTROY:
@@ -813,15 +913,15 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
 	wc2.lpszClassName = L"BotWindowClass";
 	RegisterClassW(&wc2);
 
-	HWND hwnd = CreateWindowW(L"OptionsBotGUI", L"Position Creator", WS_OVERLAPPEDWINDOW,
+	HWND hwnd = CreateWindowW(L"OptionsBotGUI", L"Position Creator",
+		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
 		CW_USEDEFAULT, CW_USEDEFAULT, 700, 600, NULL, NULL, hInstance, NULL);
-
 	if (!hwnd) return 0;
 
-	HWND hwndSecond = CreateWindowW(L"BotWindowClass", L"Options Trading Bot", WS_OVERLAPPEDWINDOW,
+	HWND hwndSecond = CreateWindowW(L"BotWindowClass", L"Options Trading Bot",
+		WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX,
 		CW_USEDEFAULT, CW_USEDEFAULT, 700, 600, NULL, NULL, hInstance, NULL);
-	if (!hwndSecond)
-		return 0;
+	if (!hwndSecond) return 0;
 
 	ShowWindow(hwnd, nCmdShow);
 	ShowWindow(hwndSecond, nCmdShow);
