@@ -47,6 +47,8 @@
 const unsigned MAX_ATTEMPTS = 50;
 const unsigned SLEEP_TIME = 10;
 
+std::atomic<bool> g_running(true);
+
 //MessageQueue messageQueue;
 //////////////////
 
@@ -596,104 +598,6 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 
 	case WM_COMMAND:
 
-		// TODO: Transfer this to activate button
-		/*
-		* if (LOWORD(wParam) == ID_START_BUTTON) {
-			wchar_t buffer[12];
-			Message mesg;
-
-			// Read values
-			GetWindowTextW(hFrontDTE, buffer, 12);
-			int frontDTE = _wtoi(buffer);
-			mesg.frontDTE = frontDTE; //ADD RELATIVE DTE AMT TO MESSAGE
-
-			GetWindowTextW(hBackDTE, buffer, 12);
-			int backDTE = _wtoi(buffer);
-			mesg.backDTE = backDTE; //ADD RELATIVE DTE AMT TO MESSAGE
-
-			GetWindowTextW(hFrontStrike, buffer, 12);////////
-			int frontStrikeRelative = _wtoi(buffer);
-			mesg.frontStrikeChangeAmt = frontStrikeRelative; //ADD RELATIVE AMT TO MESSAGE
-
-			GetWindowTextW(hBackStrike, buffer, 12);/////////////
-			int backStrikeRelative = _wtoi(buffer);
-			mesg.backStrikeChangeAmt = backStrikeRelative; //ADD RELATIVE AMT TO MESSAGE
-
-			///////////// TIME LOGIC WE WILL NEED
-			GetWindowTextW(hEntryTime, buffer, 12);
-			std::wstring entryTime = buffer;
-
-			std::wstring fullTimeString = L" " + entryTime;
-			mesg.activationTime.assign(fullTimeString);
-			///////////////////////
-
-			GetWindowTextW(hTP, buffer, 10);
-			double takeProfit = _wtof(buffer);
-			mesg.takeProfit = takeProfit;
-
-			GetWindowTextW(hSL, buffer, 10);
-			double stopLoss = _wtof(buffer);
-			mesg.stopLoss = stopLoss;
-
-
-			// Get selected option from Front Option Combo Box
-			int frontOptionIndex = SendMessageW(GetDlgItem(hwnd, ID_FRONT_OPTION), CB_GETCURSEL, 0, 0);
-			SendMessageW(GetDlgItem(hwnd, ID_FRONT_OPTION), CB_GETLBTEXT, frontOptionIndex, (LPARAM)buffer);
-			wchar_t frontOption[50];
-			wcscpy_s(frontOption, buffer);
-
-			mesg.frontOption.assign(frontOption); //ADD CALL/PUT TO MESSAGE
-
-			// Get selected option from Back Option Combo Box
-			int backOptionIndex = SendMessageW(GetDlgItem(hwnd, ID_BACK_OPTION), CB_GETCURSEL, 0, 0);
-			SendMessageW(GetDlgItem(hwnd, ID_BACK_OPTION), CB_GETLBTEXT, backOptionIndex, (LPARAM)buffer);
-			wchar_t backOption[50];
-			wcscpy_s(backOption, buffer);
-
-			mesg.backOption.assign(backOption); //ADD CALL/PUT TO MESSAGE
-
-			// Get selected action from Front Action Combo Box
-			int frontActionIndex = SendMessageW(GetDlgItem(hwnd, ID_FRONT_ACTION), CB_GETCURSEL, 0, 0);
-			SendMessageW(GetDlgItem(hwnd, ID_FRONT_ACTION), CB_GETLBTEXT, frontActionIndex, (LPARAM)buffer);
-			wchar_t frontAction[50];
-			wcscpy_s(frontAction, buffer);
-
-			mesg.frontAction.assign(frontAction); //ADD ACTION TO MESSAGE
-
-			// Get selected action from Back Action Combo Box
-			int backActionIndex = SendMessageW(GetDlgItem(hwnd, ID_BACK_ACTION), CB_GETCURSEL, 0, 0);
-			SendMessageW(GetDlgItem(hwnd, ID_BACK_ACTION), CB_GETLBTEXT, backActionIndex, (LPARAM)buffer);
-			wchar_t backAction[50];
-			wcscpy_s(backAction, buffer);
-
-			mesg.backAction.assign(backAction);//ADD ACTION TO MESSAGE
-
-			// Get Order Type
-			int orderTypeIndex = SendMessageW(GetDlgItem(hwnd, ID_ORDER_TYPE), CB_GETCURSEL, 0, 0);
-			SendMessageW(GetDlgItem(hwnd, ID_ORDER_TYPE), CB_GETLBTEXT, orderTypeIndex, (LPARAM)buffer);
-			wchar_t orderType[50];
-			wcscpy_s(orderType, buffer);
-
-			mesg.orderType.assign(orderType);
-
-			// Example: Show values in a message box
-			/*wchar_t msg[512];
-			swprintf(msg, 512,
-				L"Front Option: %s\nBack Option: %s\nFront Action: %s\nBack Action: %s\nOrder Type: %s\n\n"
-				L"Front DTE: %d\nBack DTE: %d\nEntry: %02d:%02d\nExit: %02d:%02d\nTP: %.2f\nSL: %.2f",
-				frontOption, backOption, frontAction, backAction, orderType,
-				frontDTE, backDTE, entryDate, entryTime, takeProfit, stopLoss);
-			MessageBoxW(hwnd, msg, L"Bot Settings", MB_OK);
-
-		std::wstring date = L"20250326 01:01:00"; //TEST ENTRY DATE AND TIME HERE // Format: "YYYYMMDD HH:MM:SS"
-
-
-		messageQueue.push(mesg);
-
-		}
-		*/
-
-
 		// Save button is pressed
 		if (LOWORD(wParam) == ID_SAVE_BUTTON) {
 			SavePosition();
@@ -735,6 +639,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 		break;
 
 	case WM_DESTROY:
+		g_running = false;
 		PostQuitMessage(0);
 		return 0;
 	}
@@ -1047,7 +952,7 @@ LRESULT CALLBACK BotWindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lPara
 		break;
 
 	case WM_DESTROY:
-
+		g_running = false;
 		PostQuitMessage(0);
 		break;
 	default:
@@ -1114,6 +1019,7 @@ int main(int argc, char** argv)
 	printf("Starting GUI\n");
 	std::thread guiThread(StartGui);
 
+	//ShowWindow(GetConsoleWindow(), SW_HIDE);// UNCOMMENT THIS TO HIDE CONSOLE FOR RELEASE
 
 	//TWS Message Loop below
 	for (;;) {
@@ -1131,8 +1037,12 @@ int main(int argc, char** argv)
 
 		client.connect(host, port, clientId);
 
-		while (client.isConnected()) {
+		while (g_running && client.isConnected()) {
 			client.processMessages();
+		}
+		if (g_running == false) {
+			guiThread.join();
+			exit(0);
 		}
 		if (attempt >= MAX_ATTEMPTS) {
 			break;
