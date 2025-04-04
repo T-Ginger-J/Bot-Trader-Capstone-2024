@@ -1,4 +1,5 @@
-/debug
-/release
-/x86
-/x64
+[Dd]ebug/
+[Rr]elease/
+x86/
+x64/
+.vs/

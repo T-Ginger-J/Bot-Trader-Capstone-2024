@@ -14,6 +14,10 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TwsSocketClientStatic", "..
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CapstoneIBClientStatic", "TestCppClientStatic.vcxproj", "{A2A869EF-063B-4DF7-AC04-74FA6BE0A764}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "MatlabInterface", "..\..\..\..\MatlabFrontend\MatlabInterface\MatlabInterface\MatlabInterface.vcxproj", "{535AA2E9-382A-445B-9DBA-087E8692329F}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CapstoneIBClientStaticLibrary", "..\CapstoneIBClientStaticLibrary\CapstoneIBClientStaticLibrary.vcxproj", "{D42539A9-D10C-4226-A513-9C39A43E6AB6}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -52,6 +56,22 @@ Global
 		{A2A869EF-063B-4DF7-AC04-74FA6BE0A764}.Release|Win32.Build.0 = Release|Win32
 		{A2A869EF-063B-4DF7-AC04-74FA6BE0A764}.Release|x64.ActiveCfg = Release|x64
 		{A2A869EF-063B-4DF7-AC04-74FA6BE0A764}.Release|x64.Build.0 = Release|x64
+		{535AA2E9-382A-445B-9DBA-087E8692329F}.Debug|Win32.ActiveCfg = Debug|Win32
+		{535AA2E9-382A-445B-9DBA-087E8692329F}.Debug|Win32.Build.0 = Debug|Win32
+		{535AA2E9-382A-445B-9DBA-087E8692329F}.Debug|x64.ActiveCfg = Debug|x64
+		{535AA2E9-382A-445B-9DBA-087E8692329F}.Debug|x64.Build.0 = Debug|x64
+		{535AA2E9-382A-445B-9DBA-087E8692329F}.Release|Win32.ActiveCfg = Release|Win32
+		{535AA2E9-382A-445B-9DBA-087E8692329F}.Release|Win32.Build.0 = Release|Win32
+		{535AA2E9-382A-445B-9DBA-087E8692329F}.Release|x64.ActiveCfg = Release|x64
+		{535AA2E9-382A-445B-9DBA-087E8692329F}.Release|x64.Build.0 = Release|x64
+		{D42539A9-D10C-4226-A513-9C39A43E6AB6}.Debug|Win32.ActiveCfg = Debug|Win32
+		{D42539A9-D10C-4226-A513-9C39A43E6AB6}.Debug|Win32.Build.0 = Debug|Win32
+		{D42539A9-D10C-4226-A513-9C39A43E6AB6}.Debug|x64.ActiveCfg = Debug|x64
+		{D42539A9-D10C-4226-A513-9C39A43E6AB6}.Debug|x64.Build.0 = Debug|x64
+		{D42539A9-D10C-4226-A513-9C39A43E6AB6}.Release|Win32.ActiveCfg = Release|Win32
+		{D42539A9-D10C-4226-A513-9C39A43E6AB6}.Release|Win32.Build.0 = Release|Win32
+		{D42539A9-D10C-4226-A513-9C39A43E6AB6}.Release|x64.ActiveCfg = Release|x64
+		{D42539A9-D10C-4226-A513-9C39A43E6AB6}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
