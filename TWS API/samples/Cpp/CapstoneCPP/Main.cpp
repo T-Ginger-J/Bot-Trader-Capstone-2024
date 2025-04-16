@@ -1019,7 +1019,7 @@ int main(int argc, char** argv)
 	printf("Starting GUI\n");
 	std::thread guiThread(StartGui);
 
-	//ShowWindow(GetConsoleWindow(), SW_HIDE);// UNCOMMENT THIS TO HIDE CONSOLE FOR RELEASE
+	ShowWindow(GetConsoleWindow(), SW_HIDE);// UNCOMMENT THIS TO HIDE CONSOLE FOR RELEASE
 
 	//TWS Message Loop below
 	for (;;) {
