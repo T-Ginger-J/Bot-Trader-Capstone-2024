@@ -618,7 +618,7 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) 
 				wcscpy_s(filePath, L"Presets\\");
 				PathAppendW(filePath, fileName);
 				DeleteSelectedFile(filePath);
-				LoadSavedBots(hFileList);
+				LoadSavedPositions(hFileList);
 			}
 		}
 
