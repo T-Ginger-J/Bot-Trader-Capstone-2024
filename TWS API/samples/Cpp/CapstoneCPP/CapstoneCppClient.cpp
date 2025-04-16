@@ -45,6 +45,7 @@
 #include <stdlib.h>
 #include <iomanip>  
 #include <sstream> 
+#include <deque>
 
 
 // Global (or class‐member) maps to hold partial data
@@ -57,7 +58,7 @@ std::map<int, double> g_orderCommission;
 
 
 const int PING_DEADLINE = 2; // seconds
-const int SLEEP_BETWEEN_PINGS = 15; // seconds
+const int SLEEP_BETWEEN_PINGS = 5; // seconds
 
 ///////////////////////////////
 //OUR GLOBAL VARIABLES
@@ -93,6 +94,8 @@ Decimal amountOfLots;
 std::unordered_map<OrderId, Contract> contractMap;
 
 std::unordered_map<time_t, Message> pendingOrderMap;
+
+std::deque<TradeRecord> openTrades;
 
 time_t currentOrderFromMap;
 
@@ -529,9 +532,6 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 	actionLeg1 = wstringToString(msg.frontAction).c_str();
 
 	userStrikePriceLeg2 = userStrikePriceLeg1 + msg.backStrikeChangeAmt;
-	/*userStrikePriceLeg2 = msg.backStrikeChangeAmt;
-	userStrikePriceLeg2 = spxCurrentPrice + userStrikePriceLeg2;
-	userStrikePriceLeg2 = 5 * floor(abs(userStrikePriceLeg2 / 5)); */
 
 	printf("Leg 2 Using Strike of: %f \n", userStrikePriceLeg2);
 
@@ -551,7 +551,7 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 		usePercentage = false;
 	}
 
-	takeProfitValue = msg.takeProfit;// HARD CODED FOR NOW NEED TO GET THIS FROM GUI
+	takeProfitValue = msg.takeProfit;
 	stopLossValue = msg.stopLoss;
 
 	amountOfLots = DecimalFunctions::doubleToDecimal(msg.lots);
@@ -590,7 +590,7 @@ void CapstoneCppClient::getComboOrder() { // GET INFORMATION FROM USER FOR COMBO
 
 void CapstoneCppClient::getComboPrices() {
 	m_pClient->reqMktData(5, ContractSamples::SPXComboContract(legOneConId,actionLeg1 ,legTwoConId, actionLeg2), "", false, false, TagValueListSPtr());
-	std::this_thread::sleep_for(std::chrono::seconds(2));//////
+	std::this_thread::sleep_for(std::chrono::seconds(1));//////
 	m_pClient->cancelMktData(5);
 
 	m_state = ST_COMBOORDER;
@@ -627,11 +627,9 @@ void CapstoneCppClient::placeComboOrder() {
 			stopLossPrice = comboLimitPrice - stopLossValue;
 		}
 
-
 		printf("Take Profit Set to %f\n",takeProfitPrice);
 		printf("Stop Loss Set to %f\n",stopLossPrice);
 
-		//std::this_thread::sleep_for(std::chrono::seconds(10));
 
 		Order parent;
 		Order takeProfit;
@@ -743,14 +741,8 @@ void CapstoneCppClient::contractDetails(int reqId, const ContractDetails& contra
 		else if (reqId == 1001) {
 			legTwoConId = contractDetails.contract.conId;
 		}
-
 	}
 	else {
-		//printf("ContractDetails begin. ReqId: %d\n", reqId);
-		//printContractMsg(contractDetails.contract);
-		//printContractDetailsMsg(contractDetails);
-		//printf("ContractDetails end. ReqId: %d\n", reqId);
-
 		underlyingConId = contractDetails.contract.conId;
 	}
 }
@@ -776,7 +768,7 @@ void CapstoneCppClient::contractDetailsEnd(int reqId) {
 			m_pClient->reqMarketDataType(1); //REMOVE WHEN TESTIG WITH PROF
 			std::this_thread::sleep_for(std::chrono::seconds(1));
 			m_pClient->reqMktData(2, contract, "", false, false, TagValueListSPtr());
-			std::this_thread::sleep_for(std::chrono::seconds(2));
+			std::this_thread::sleep_for(std::chrono::seconds(1));
 			m_pClient->cancelMktData(2);
 
 		}
@@ -839,7 +831,7 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 		
 		if (comboLimitPrice <= price) { //THIS IS TEST FOR SINGLE CHANGE TO 0.05 FOR CALENDER
 
-			double newLimit = comboLimitPrice + 0.05;
+			double newLimit = comboLimitPrice + 0.10; //WENT FROM 0.05 TO BE MORE AGRESSIVE AT 0.10
 			printf("Adjusting Limit Price from: %f to: %f\n", comboLimitPrice, newLimit);
 			comboLimitPrice = newLimit;
 
@@ -895,7 +887,7 @@ void CapstoneCppClient::tickPrice(TickerId tickerId, TickType field, double pric
 			m_orderId = adjustedStopLoss.orderId + 1;
 			m_state = ST_ADJUSTORDER;
 			isComboCheck = false;
-			std::this_thread::sleep_for(std::chrono::seconds(7));//TESTING
+			std::this_thread::sleep_for(std::chrono::seconds(3));//TESTING
 			return;
 		}
 
@@ -1057,6 +1049,59 @@ void CapstoneCppClient::execDetails(int reqId, const Contract& contract, const E
 		g_tradeMap.erase(it);
 		g_orderCommission.erase(execution.orderId);
 	}
+	/*/std::string currentSide = execution.side;
+	auto matchOpenTrade = [&](const TradeRecord& tr) {
+		return tr.symbol == contract.symbol &&
+			((currentSide == "BUY" && tr.side == "SELL") ||  // Closing short
+				(currentSide == "SELL" && tr.side == "BUY"));   // Closing long
+	};
+
+	auto it = std::find_if(openTrades.begin(), openTrades.end(), matchOpenTrade);
+
+	if (it != openTrades.end()) {
+		
+		double closeAmount = min(shares, it->shares);
+		double remainingShares = it->shares - closeAmount;
+
+		double grossProfit = 0.0;
+		if (it->side == "BUY") { // Closing long
+			grossProfit = (execution.price - it->entryPrice) * closeAmount;
+		}
+		else { // Closing short
+			grossProfit = (it->entryPrice - execution.price) * closeAmount;
+		}
+
+		double entryCommission = g_orderCommission[it->entryOrderId];
+		double exitCommission = g_orderCommission[execution.orderId];
+		double netProfit = grossProfit - entryCommission - exitCommission;
+
+		TradeRecord closedRecord = *it;
+		closedRecord.exitTime = execution.time;
+		closedRecord.exitPrice = execution.price;
+		closedRecord.exitOrderId = execution.orderId;
+		closedRecord.shares = closeAmount;
+
+		appendTradeRecordToCsv(closedRecord, grossProfit,
+			entryCommission + exitCommission, netProfit);
+
+		if (remainingShares > 0) {
+			it->shares = remainingShares;
+		}
+		else {
+			openTrades.erase(it);
+		}
+	}
+	else {
+		TradeRecord newTrade;
+		newTrade.symbol = contract.symbol;
+		newTrade.entryTime = execution.time;
+		newTrade.entryPrice = execution.price;
+		newTrade.shares = shares;
+		newTrade.side = execution.side;
+		newTrade.entryOrderId = execution.orderId;
+		newTrade.exitOrderId = -1;
+		openTrades.push_back(newTrade);
+	}*/
 }
 //! [execdetails]
 
@@ -1093,6 +1138,9 @@ void CapstoneCppClient::error(int id, int errorCode, const std::string& errorStr
 	}
 	else {
 		printf("Error. Id: %d, Code: %d, Msg: %s\n", id, errorCode, errorString.c_str());
+		if ( errorCode == 321) {
+			m_state = ST_WAITFORINPUT;
+		}
 	}
 }
 //! [error]
@@ -1301,7 +1349,6 @@ void CapstoneCppClient::reqHistoricalTicks()
 	m_state = ST_REQHISTORICALTICKS_ACK;
 }
 
-//USE BELOW
 void CapstoneCppClient::reqTickByTickData()
 {
 	/*** Requesting tick-by-tick data (only refresh) ***/
@@ -1337,12 +1384,6 @@ void CapstoneCppClient::reqTickByTickData()
 
 	m_state = ST_REQTICKBYTICKDATA_ACK;
 }
-
-
-
-
-
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // OTHER TWS EXAMPLE CALLBACK FUCNTIONS WE MAY OR MAY NOT NEED

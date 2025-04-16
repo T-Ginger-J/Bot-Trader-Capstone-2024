@@ -68,6 +68,8 @@ struct TradeRecord {
 	double exitPrice;
 	double shares;
 	std::string side;   // The side of the entry ("BUY" for a long entry, "SELL" for a short entry)
+	long entryOrderId;     // To retrieve entry commission
+	long exitOrderId;      // To retrieve exit commission
 };
 
 //! [ewrapperimpl]
