@@ -149,18 +149,62 @@ void saveText(std::string str, FILE* file) {
 
 ///////////////////
 
-//TODO: Refactor so that the functions are: execute, make bot, make position
+int StartTWSClient(const char* host, int port, const char* connectOptions)
+{
+	int clientId = 0;
+	unsigned attempt = 0;
+
+	//TWS Message Loop below
+	for (;;) {
+		++attempt;
+		printf("Attempt %u of %u\n", attempt, MAX_ATTEMPTS);
+
+		CapstoneCppClient client;
+
+		// Run time error will occur (here) if TestCppClient.exe is compiled in debug mode but TwsSocketClient.dll is compiled in Release mode
+		// TwsSocketClient.dll (in Release Mode) is copied by API installer into SysWOW64 folder within Windows directory 
+
+		if (connectOptions) {
+			client.setConnectOptions(connectOptions);
+		}
+
+		client.connect(host, port, clientId);
+
+		while (client.isConnected()) {
+			client.processMessages();
+		}
+		if (attempt >= MAX_ATTEMPTS) {
+			return 1;
+		}
+
+		printf("Sleeping %u seconds before next attempt\n", SLEEP_TIME);
+		std::this_thread::sleep_for(std::chrono::seconds(SLEEP_TIME));
+	}
+
+	return 0;
+}
+
+
 //TODO: Integrate with MATLAB
-int executeBot(const char* host, int port, const char* connectionOptions, int argc, char** argv)
+int executeBot(int argc, char** argv)
 {
 	//Inputs:
+	//host
+	//port
+	//connectOptions
 	//bot path
 
-	if (argc < 1) {
+	const char* host = argc > 0 ? argv[0] : "";
+	int port = argc > 1 ? atoi(argv[1]) : 0;
+	if (port <= 0)
+		port = 7497;
+	const char* connectOptions = argc > 2 ? argv[2] : "+PACEAPI";
+
+	if (argc < 4 || argv[3] == "") {
 		printf("No bot path given.");
 		return 1;
 	}
-	std::string filename = argv[0];
+	std::string filename = argv[4];
 
 	//GET BOT
 	/*int selIndex;
@@ -321,10 +365,10 @@ int executeBot(const char* host, int port, const char* connectionOptions, int ar
 
 		messageQueue.push(mesg);
 
-		return 0;
+		return StartTWSClient(host, port, connectOptions);
 	}
 }
-int createBot(const char* host, int port, const char* connectionOptions, int argc, char** argv)
+int createBot(int argc, char** argv)
 {
 	//inputs:
 	//path
@@ -332,14 +376,14 @@ int createBot(const char* host, int port, const char* connectionOptions, int arg
 	std::tuple<char*, char*, int> position;
 	position_list positions;
 
-	if (argc < 1) {
+	if (argc < 1 || argv[0] == "") {
 		printf("No bot path given.");
 		return 1;
 	}
 
 	char* botfilename = argv[0];
 
-	if ((argc - 1) % 3 == 0 && argc >= 4) {
+	if ((argc - 1) % 3 == 0 && argc > 1) {
 		printf("Invalid positions provided.");
 		return 1;
 	}
@@ -348,7 +392,7 @@ int createBot(const char* host, int port, const char* connectionOptions, int arg
 	{
 		char* positionPath = argv[i];
 		char* entryTime = argv[i + 1];
-		int number = atoi(argv[2]);
+		int number = atoi(argv[i + 2]);
 		position = std::make_tuple(positionPath, entryTime, number);
 		positions.push_back(position);
 	}
@@ -411,13 +455,13 @@ int createBot(const char* host, int port, const char* connectionOptions, int arg
 		return 1;
 	}
 }
-int createPosition(const char* host, int port, const char* connectionOptions, int argc, char** argv)
+int createPosition(int argc, char** argv)
 {
 	//inputs:
 	//path
 	//front leg - tuple(option{call,put}, expiry_date, strike_offset, action{buy,sell})
 	//back leg - tuple(option{call,put}, expiry_date, strike_offset, action{buy,sell})
-	//orders type {percentage, ____}
+	//orders type {percentage, offset}
 	//take_profit
 	//stop_loss
 
@@ -493,71 +537,35 @@ int createPosition(const char* host, int port, const char* connectionOptions, in
 	}
 }
 
-int StartTWSClient(const char* host, int port, const char* connectOptions, MessageQueue messageQueue)
-{
-	int clientId = 0;
-	unsigned attempt = 0;
-
-	//TWS Message Loop below
-	for (;;) {
-		++attempt;
-		printf("Attempt %u of %u\n", attempt, MAX_ATTEMPTS);
-
-		CapstoneCppClient client;
-
-		// Run time error will occur (here) if TestCppClient.exe is compiled in debug mode but TwsSocketClient.dll is compiled in Release mode
-		// TwsSocketClient.dll (in Release Mode) is copied by API installer into SysWOW64 folder within Windows directory 
-
-		if (connectOptions) {
-			client.setConnectOptions(connectOptions);
-		}
-
-		client.connect(host, port, clientId);
-
-		while (client.isConnected()) {
-			client.processMessages();
-		}
-		if (attempt >= MAX_ATTEMPTS) {
-			return 1;
-		}
-
-		printf("Sleeping %u seconds before next attempt\n", SLEEP_TIME);
-		std::this_thread::sleep_for(std::chrono::seconds(SLEEP_TIME));
-	}
-
-	return 0;
-}
 
 /////////////////////////////////
 int main(int argc, char** argv)
 {
-	const char* host = argc > 1 ? argv[1] : "";
-	int port = argc > 2 ? atoi(argv[2]) : 0;
-	if (port <= 0)
-		port = 7497;
-	const char* connectOptions = argc > 3 ? argv[3] : "+PACEAPI";
+	/*
+	* argv[0] = MatlabInterface.exe
+	* argv[1] = ml_option
+	* argv[2...] = args
+	*/
 
-	const int ml_option = argc > 4 ? atoi(argv[4]) : 0;
+	const int ml_option = argc > 1 ? atoi(argv[1]) : 0;
 
 	printf("Start of IB C++ Socket Client For Capstone Project\n");
 
 	//reformat argv for functions
-	int new_argc = argc - 5;
+	int new_argc = argc - 1;
 	char** new_argv = new char* [new_argc];
-	for (int i = 0; i < new_argc; i++)
+	for (int i = 1; i < new_argc; i++)
 	{
-		new_argv[i] = argv[i + 5];
+		new_argv[i] = argv[i + 1];
 	}
-
-	// MessageQueue messageQueue = MessageQueue();
 
 	switch (ml_option) {
 	case 1:
-		return executeBot(host, port, connectOptions, new_argc, new_argv);
+		return executeBot(argc, argv);
 	case 2:
-		return createBot(host, port, connectOptions, new_argc, new_argv);
+		return createBot(argc, argv);
 	case 3:
-		return createPosition(host, port, connectOptions, new_argc, new_argv);
+		return createPosition(argc, argv);
 	}
 
 	printf("No MATLAB option provided\n");
